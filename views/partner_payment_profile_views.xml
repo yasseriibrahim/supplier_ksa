@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════
+         PAYMENT PROFILE (PLAN) VIEWS
+    ══════════════════════════════════════════════════════════ -->
+
+    <record id="view_payment_profile_form" model="ir.ui.view">
+        <field name="name">partner.payment.profile.form</field>
+        <field name="model">partner.payment.profile</field>
+        <field name="arch" type="xml">
+            <form string="Payment Plan">
+                <header>
+                    <button name="action_activate" string="Activate"
+                            type="object" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_generate_installments"
+                            string="Generate / Regenerate Lines"
+                            type="object" class="btn-secondary"
+                            invisible="state in ('done','cancelled')"
+                            icon="fa-magic"/>
+                    <button name="action_mark_done" string="Mark Completed"
+                            type="object" class="btn-success"
+                            invisible="state != 'active'"/>
+                    <button name="action_cancel" string="Cancel"
+                            type="object"
+                            invisible="state in ('done','cancelled')"/>
+                    <button name="action_reset_draft" string="Reset to Draft"
+                            type="object"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,active,done"/>
+                </header>
+                <sheet>
+                    <!-- Smart buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_invoice" type="object"
+                                class="oe_stat_button" icon="fa-file-text-o"
+                                invisible="not invoice_id">
+                            <span class="o_stat_text">Invoice</span>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Client &amp; Type">
+                            <field name="partner_id"
+                                   readonly="state not in ('draft',)"/>
+                            <field name="payment_type"
+                                   readonly="state not in ('draft','active')"/>
+                            <field name="fixed_day"
+                                   invisible="payment_type != 'fixed_day'"/>
+                            <field name="credit_limit"
+                                   invisible="payment_type != 'credit'"/>
+                            <field name="grace_days"
+                                   invisible="payment_type != 'credit'"/>
+                            <field name="currency_id" groups="base.group_multi_currency"/>
+                        </group>
+                        <group string="Invoice &amp; Amounts">
+                            <field name="invoice_id_domain" invisible="1"/>
+                            <field name="invoice_id"
+                                   readonly="state not in ('draft',)"
+                                   domain="invoice_id_domain"/>
+                            <field name="invoice_amount_total"
+                                   invisible="not invoice_id" readonly="1"/>
+                            <field name="invoice_state"
+                                   invisible="not invoice_id" readonly="1"/>
+                            <field name="total_amount"
+                                   readonly="state not in ('draft','active')"/>
+                            <field name="amount_paid" readonly="1"/>
+                            <field name="amount_remaining" readonly="1"/>
+                            <field name="amount_overdue" readonly="1"
+                                   decoration-danger="amount_overdue > 0"/>
+                            <field name="progress_pct" readonly="1"
+                                   widget="progressbar"/>
+                        </group>
+                    </group>
+
+                    <!-- Installment config — only shown for installment type -->
+                    <group string="Installment Configuration"
+                           invisible="payment_type != 'installment'">
+                        <group>
+                            <field name="installment_count"
+                                   readonly="state not in ('draft','active')"/>
+                            <field name="installment_frequency"
+                                   readonly="state not in ('draft','active')"/>
+                            <field name="custom_days"
+                                   invisible="installment_frequency != 'custom'"
+                                   readonly="state not in ('draft','active')"/>
+                        </group>
+                        <group>
+                            <field name="start_date"
+                                   readonly="state not in ('draft','active')"/>
+                            <field name="amount_per_installment" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Installment Lines -->
+                        <page string="Installment Lines" name="lines">
+                            <field name="installment_line_ids"
+                                   readonly="state in ('done','cancelled')">
+                                <list editable="bottom"
+                                      decoration-danger="is_overdue and state not in ('paid','waived')"
+                                      decoration-success="state == 'paid'"
+                                      decoration-muted="state == 'waived'"
+                                      decoration-warning="state == 'partial'">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="due_date"/>
+                                    <field name="amount_expected"/>
+                                    <field name="amount_paid"/>
+                                    <field name="amount_remaining" readonly="1"/>
+                                    <field name="days_overdue" readonly="1"
+                                           optional="show"
+                                           decoration-danger="days_overdue > 0"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'paid'"
+                                           decoration-warning="state == 'partial'"
+                                           decoration-danger="state == 'overdue'"
+                                           decoration-muted="state == 'waived'"/>
+                                    <field name="invoice_id_domain" column_invisible="1"/>
+                                    <field name="invoice_id" optional="show" domain="invoice_id_domain"/>
+                                    <field name="invoice_amount_total"
+                                           readonly="1" optional="show"
+                                           string="Invoice Total"/>
+                                    <field name="invoice_payment_state"
+                                           readonly="1" optional="show"
+                                           string="Inv. Status"
+                                           widget="badge"
+                                           decoration-success="invoice_payment_state == 'paid'"
+                                           decoration-warning="invoice_payment_state == 'partial'"
+                                           decoration-danger="invoice_payment_state == 'not_paid'"/>
+                                    <field name="invoice_date"
+                                           readonly="1" optional="show"
+                                           string="Invoice Date"/>
+                                    <field name="payment_date" optional="show"/>
+                                    <field name="payment_method" optional="show"/>
+                                    <field name="payment_reference" optional="show"/>
+                                    <field name="partner_id" column_invisible="1"/>
+                                    <field name="bank_id" optional="show" domain="[('partner_id', '=', partner_id)]"/>
+                                    <field name="notes" optional="show"/>
+                                    <field name="is_overdue" column_invisible="1"/>
+                                    <button name="action_mark_paid" string="Mark Paid"
+                                            type="object" icon="fa-check"
+                                            invisible="state in ('paid','waived')"/>
+                                    <button name="action_mark_waived" string="Waive"
+                                            type="object" icon="fa-times"
+                                            invisible="state in ('paid','waived')"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- Notes -->
+                        <page string="Notes" name="notes">
+                            <field name="notes"
+                                   placeholder="Notes about this payment plan…"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Plan List ── -->
+    <record id="view_payment_profile_list" model="ir.ui.view">
+        <field name="name">partner.payment.profile.list</field>
+        <field name="model">partner.payment.profile</field>
+        <field name="arch" type="xml">
+            <list string="Payment Plans"
+                  decoration-danger="amount_overdue > 0"
+                  decoration-success="state == 'done'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="payment_type" widget="badge"/>
+                <field name="invoice_id" optional="show"/>
+                <field name="start_date"/>
+                <field name="installment_count" optional="show"/>
+                <field name="total_amount"/>
+                <field name="amount_paid"/>
+                <field name="amount_remaining"/>
+                <field name="amount_overdue"
+                       decoration-danger="amount_overdue > 0"
+                       decoration-success="amount_overdue == 0"/>
+                <field name="progress_pct" widget="progressbar" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-info="state == 'active'"
+                       decoration-warning="state == 'draft'"
+                       decoration-danger="state == 'cancelled'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Plan Search ── -->
+    <record id="view_payment_profile_search" model="ir.ui.view">
+        <field name="name">partner.payment.profile.search</field>
+        <field name="model">partner.payment.profile</field>
+        <field name="arch" type="xml">
+            <search string="Search Payment Plans">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="invoice_id"/>
+                <filter string="Active" name="active"
+                        domain="[('state','=','active')]"/>
+                <filter string="Draft" name="draft"
+                        domain="[('state','=','draft')]"/>
+                <filter string="Has Overdue" name="overdue"
+                        domain="[('amount_overdue','>',0)]"/>
+                <filter string="Completed" name="done"
+                        domain="[('state','=','done')]"/>
+                <separator/>
+                <filter string="Direct" name="direct"
+                        domain="[('payment_type','=','direct')]"/>
+                <filter string="Installments" name="installment"
+                        domain="[('payment_type','=','installment')]"/>
+                <filter string="Fixed Day" name="fixed_day"
+                        domain="[('payment_type','=','fixed_day')]"/>
+                    <filter string="Client" name="g_partner"
+                            context="{'group_by':'partner_id'}"/>
+                    <filter string="Payment Type" name="g_type"
+                            context="{'group_by':'payment_type'}"/>
+                    <filter string="Status" name="g_state"
+                            context="{'group_by':'state'}"/>
+                    <filter string="Start Date" name="g_date"
+                            context="{'group_by':'start_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Pivot ── -->
+    <record id="view_payment_profile_pivot" model="ir.ui.view">
+        <field name="name">partner.payment.profile.pivot</field>
+        <field name="model">partner.payment.profile</field>
+        <field name="arch" type="xml">
+            <pivot string="Payment Plan Analysis">
+                <field name="partner_id" type="row"/>
+                <field name="payment_type" type="col"/>
+                <field name="total_amount" type="measure"/>
+                <field name="amount_paid" type="measure"/>
+                <field name="amount_overdue" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- ── Plan Action ── -->
+    <record id="action_payment_profile" model="ir.actions.act_window">
+        <field name="name">Payment Plans</field>
+        <field name="res_model">partner.payment.profile</field>
+        <field name="view_mode">list,form,pivot</field>
+        <field name="search_view_id" ref="view_payment_profile_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first payment plan
+            </p>
+            <p>
+                Track per-client payment schedules, installments, and balances.
+            </p>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════
+         INSTALLMENT LINE STANDALONE VIEWS
+    ══════════════════════════════════════════════════════════ -->
+
+    <record id="view_payment_installment_list" model="ir.ui.view">
+        <field name="name">partner.payment.installment.list</field>
+        <field name="model">partner.payment.installment</field>
+        <field name="arch" type="xml">
+            <list string="Installments"
+                  decoration-danger="is_overdue and state not in ('paid','waived')"
+                  decoration-success="state == 'paid'"
+                  decoration-muted="state == 'waived'"
+                  decoration-warning="state == 'partial'">
+                <field name="partner_id"/>
+                <field name="plan_id"/>
+                <field name="sequence" string="#"/>
+                <field name="due_date"/>
+                <field name="amount_expected"/>
+                <field name="amount_paid"/>
+                <field name="amount_remaining"/>
+                <field name="days_overdue" decoration-danger="days_overdue > 0"/>
+                <field name="invoice_id" optional="show"/>
+                <field name="invoice_amount_total" readonly="1" optional="show"
+                       string="Invoice Total"/>
+                <field name="invoice_payment_state" readonly="1" optional="show"
+                       string="Inv. Status"
+                       widget="badge"
+                       decoration-success="invoice_payment_state == 'paid'"
+                       decoration-warning="invoice_payment_state == 'partial'"
+                       decoration-danger="invoice_payment_state == 'not_paid'"/>
+                <field name="invoice_date" readonly="1" optional="show"
+                       string="Invoice Date"/>
+                <field name="payment_date" optional="show"/>
+                <field name="payment_method" optional="show"/>
+                <field name="payment_reference" optional="show"/>
+                <field name="bank_id" optional="show" domain="[('partner_id', '=', partner_id)]"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'paid'"
+                       decoration-warning="state == 'partial'"
+                       decoration-danger="state == 'overdue'"
+                       decoration-muted="state == 'waived'"/>
+                <field name="is_overdue" column_invisible="1"/>
+                <button name="action_mark_paid" string="Mark Paid"
+                        type="object" icon="fa-check"
+                        invisible="state in ('paid','waived')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_payment_installment_search" model="ir.ui.view">
+        <field name="name">partner.payment.installment.search</field>
+        <field name="model">partner.payment.installment</field>
+        <field name="arch" type="xml">
+            <search string="Search Installments">
+                <field name="partner_id"/>
+                <field name="plan_id"/>
+                <filter string="Overdue" name="overdue"
+                        domain="[('is_overdue','=',True),('state','not in',['paid','waived'])]"/>
+                <filter string="Pending" name="pending"
+                        domain="[('state','=','pending')]"/>
+                <filter string="Paid" name="paid"
+                        domain="[('state','=','paid')]"/>
+                <filter string="Partial" name="partial"
+                        domain="[('state','=','partial')]"/>
+                <separator/>
+                <filter string="Due This Month" name="due_month"
+                        domain="[('due_date','&gt;=',context_today().strftime('%Y-%m-01')),
+                                  ('due_date','&lt;=',context_today().strftime('%Y-%m-28'))]"/>
+                    <filter string="Client" name="g_partner"
+                            context="{'group_by':'partner_id'}"/>
+                    <filter string="Plan" name="g_plan"
+                            context="{'group_by':'plan_id'}"/>
+                    <filter string="Status" name="g_state"
+                            context="{'group_by':'state'}"/>
+                    <filter string="Due Date" name="g_date"
+                            context="{'group_by':'due_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_payment_installment" model="ir.actions.act_window">
+        <field name="name">All Installments</field>
+        <field name="res_model">partner.payment.installment</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_payment_installment_search"/>
+        <field name="context">{'search_default_overdue': 1}</field>
+    </record>
+
+    <record id="action_payment_installment_overdue" model="ir.actions.act_window">
+        <field name="name">Overdue Installments</field>
+        <field name="res_model">partner.payment.installment</field>
+        <field name="view_mode">list</field>
+        <field name="domain">[('is_overdue','=',True),('state','not in',['paid','waived'])]</field>
+    </record>
+
+    <!-- ── Top-level menu ── -->
+    <menuitem id="menu_payment_profile_root"
+              name="Payment Profiles"
+              parent="account.menu_finance"
+              sequence="99"/>
+
+    <menuitem id="menu_payment_profile_plans"
+              name="Payment Plans"
+              parent="menu_payment_profile_root"
+              action="action_payment_profile"
+              sequence="10"/>
+
+    <menuitem id="menu_payment_installments"
+              name="All Installments"
+              parent="menu_payment_profile_root"
+              action="action_payment_installment"
+              sequence="20"/>
+
+    <menuitem id="menu_payment_installments_overdue"
+              name="Overdue Installments"
+              parent="menu_payment_profile_root"
+              action="action_payment_installment_overdue"
+              sequence="30"/>
+
+</odoo>

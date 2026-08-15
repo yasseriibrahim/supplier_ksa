@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sale_order_form_custom_quotation_button" model="ir.ui.view">
+        <field name="name">sale.order.form.custom.quotation.button</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_print_custom_quotation"
+                        string="Print Custom Quotation"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state == 'cancel'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

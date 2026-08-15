@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_my_home_delivery" name="Portal My Home: Deliveries"
+              inherit_id="portal.portal_my_home"
+              customize_show="True" priority="30">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">My Deliveries</t>
+                <t t-set="url">/my/deliveries</t>
+                <t t-set="placeholder_count">delivery_count</t>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="portal_my_deliveries" name="My Deliveries">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Deliveries</t>
+            </t>
+            <t t-if="not deliveries">
+                <div class="alert alert-info">No deliveries found.</div>
+            </t>
+            <t t-if="deliveries">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Trip</th><th>Date</th><th>Region</th>
+                                    <th class="text-end">Total</th><th>Invoice</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="deliveries" t-as="delivery">
+                                    <tr>
+                                        <td><span t-esc="delivery.trip_id.name"/></td>
+                                        <td><span t-esc="delivery.trip_id.trip_date" t-options='{"widget": "date"}'/></td>
+                                        <td><span t-esc="delivery.region_id.name"/></td>
+                                        <td class="text-end">
+                                            <span t-esc="delivery.total_amount"
+                                                  t-options='{"widget": "monetary", "display_currency": delivery.trip_id.company_id.currency_id}'/>
+                                        </td>
+                                        <td>
+                                            <t t-if="delivery.invoice_id">
+                                                <span t-attf-class="badge #{'bg-success' if delivery.invoice_state == 'paid' else 'bg-warning text-dark' if delivery.invoice_state == 'partial' else 'bg-secondary'}">
+                                                    <t t-esc="delivery.invoice_state or 'Not paid'"/>
+                                                </span>
+                                            </t>
+                                            <t t-else=""><span class="text-muted">—</span></t>
+                                        </td>
+                                        <td>
+                                            <a t-attf-href="/my/deliveries/#{delivery.id}" class="btn btn-sm btn-outline-primary">View</a>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="mt-3"><t t-call="portal.pager"/></div>
+            </t>
+        </t>
+    </template>
+
+    <template id="portal_delivery_detail" name="Delivery Detail">
+        <t t-call="portal.portal_layout">
+            <t t-call="portal.portal_record_layout">
+                <t t-set="card_header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Delivery — <t t-esc="delivery.trip_id.name"/></h5>
+                        <span t-attf-class="badge #{'bg-success' if delivery.invoice_state == 'paid' else 'bg-secondary'}">
+                            <t t-esc="delivery.invoice_state or 'Pending'"/>
+                        </span>
+                    </div>
+                </t>
+                <t t-set="card_body">
+                    <div class="row mb-3">
+                        <div class="col-6"><strong>Trip Date:</strong> <span t-esc="delivery.trip_id.trip_date" t-options='{"widget": "date"}'/></div>
+                        <div class="col-6"><strong>Region:</strong> <span t-esc="delivery.region_id.name"/></div>
+                        <div class="col-6 mt-2"><strong>Car:</strong> <span t-esc="delivery.trip_id.car_id.name"/> (<span t-esc="delivery.trip_id.car_id.plate_number"/>)</div>
+                        <div class="col-6 mt-2"><strong>Driver:</strong> <span t-esc="delivery.trip_id.driver_id.name or '—'"/></div>
+                    </div>
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Subtotal</th></tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="delivery.delivery_line_ids" t-as="line">
+                                <tr>
+                                    <td><t t-esc="line.product_id.name"/></td>
+                                    <td class="text-end"><t t-esc="line.delivered_qty"/> <small class="text-muted"><t t-esc="line.uom_id.name"/></small></td>
+                                    <td class="text-end"><t t-esc="line.price_unit" t-options='{"widget": "monetary", "display_currency": delivery.trip_id.company_id.currency_id}'/></td>
+                                    <td class="text-end"><t t-esc="line.subtotal" t-options='{"widget": "monetary", "display_currency": delivery.trip_id.company_id.currency_id}'/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="3" class="text-end">Total</td>
+                                <td class="text-end"><t t-esc="delivery.total_amount" t-options='{"widget": "monetary", "display_currency": delivery.trip_id.company_id.currency_id}'/></td>
+                            </tr>
+                            <t t-if="delivery.is_cod">
+                                <tr class="text-success">
+                                    <td colspan="3" class="text-end">Collected (COD)</td>
+                                    <td class="text-end"><t t-esc="delivery.amount_collected" t-options='{"widget": "monetary", "display_currency": delivery.trip_id.company_id.currency_id}'/></td>
+                                </tr>
+                            </t>
+                        </tfoot>
+                    </table>
+                    <t t-if="delivery.invoice_id">
+                        <div class="mt-3">
+                            <a t-attf-href="/my/invoices/#{delivery.invoice_id.id}" class="btn btn-outline-primary btn-sm">
+                                <i class="fa fa-file-text-o"/> View Invoice
+                            </a>
+                        </div>
+                    </t>
+                    <t t-if="delivery.notes">
+                        <div class="mt-3 alert alert-light">
+                            <strong>Notes:</strong> <t t-esc="delivery.notes"/>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

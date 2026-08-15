@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================= FORM ============================= -->
+    <record id="non_invoiced_order_view_form" model="ir.ui.view">
+        <field name="name">non.invoiced.order.form</field>
+        <field name="model">non.invoiced.order</field>
+        <field name="arch" type="xml">
+            <form string="Non Invoiced Order">
+                <header>
+                    <button name="action_done" type="object" string="Done"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_picking" type="object"
+                                class="oe_stat_button" icon="fa-truck"
+                                invisible="picking_count == 0">
+                            <field name="picking_count" string="Transfers" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id"
+                                   options="{'no_create': True}"
+                                   widget="res_partner_many2one"/>
+                            <field name="date_order"/>
+                        </group>
+                        <group>
+                            <field name="location_id" options="{'no_create': True}"
+                                   readonly="state == 'done'"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Order Lines" name="order_lines">
+                            <field name="line_ids" readonly="state == 'done'">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="product_domain" column_invisible="1"/>
+                                    <field name="line_location_id"
+                                           options="{'no_create': True}"
+                                           readonly="parent.location_id"/>
+                                    <field name="product_id"
+                                           domain="product_domain"
+                                           options="{'no_create': True}"/>
+                                    <field name="quantity"/>
+                                    <field name="price_unit"/>
+                                    <field name="price_subtotal"
+                                           sum="Total"
+                                           widget="monetary"/>
+                                </list>
+                            </field>
+
+                            <group class="oe_subtotal_footer oe_right">
+                                <field name="amount_total"
+                                       widget="monetary"
+                                       class="oe_subtotal_footer_separator"/>
+                            </group>
+                            <div class="clearfix"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="note" placeholder="Internal notes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================= LIST ============================= -->
+    <record id="non_invoiced_order_view_list" model="ir.ui.view">
+        <field name="name">non.invoiced.order.list</field>
+        <field name="model">non.invoiced.order</field>
+        <field name="arch" type="xml">
+            <list string="Non Invoiced Orders">
+                <field name="name"/>
+                <field name="date_order"/>
+                <field name="partner_id"/>
+                <field name="location_id"/>
+                <field name="state"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="amount_total" sum="Total" widget="monetary"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================ SEARCH ============================ -->
+    <record id="non_invoiced_order_view_search" model="ir.ui.view">
+        <field name="name">non.invoiced.order.search</field>
+        <field name="model">non.invoiced.order</field>
+        <field name="arch" type="xml">
+            <search string="Search Non Invoiced Orders">
+                <field name="name" string="Reference"/>
+                <field name="partner_id"/>
+                <field name="location_id"/>
+                <field name="line_ids" string="Product"
+                       filter_domain="[('line_ids.product_id', 'ilike', self)]"/>
+
+                <filter name="filter_this_month" string="This Month"
+                        domain="[('date_order', '&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                 ('date_order', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="filter_my_orders" string="My Orders"
+                        domain="[('create_uid', '=', uid)]"/>
+
+                <filter name="group_partner" string="Customer"
+                        context="{'group_by': 'partner_id'}"/>
+                <filter name="group_location" string="Warehouse Location"
+                        context="{'group_by': 'location_id'}"/>
+                <filter name="group_date" string="Order Date"
+                        context="{'group_by': 'date_order'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============================ ACTION ============================ -->
+    <record id="non_invoiced_order_action" model="ir.actions.act_window">
+        <field name="name">Non Invoiced Orders</field>
+        <field name="res_model">non.invoiced.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="non_invoiced_order_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new non invoiced order
+            </p>
+            <p>
+                Record customer orders that are held outside the invoicing flow.
+            </p>
+        </field>
+    </record>
+
+    <!-- ============================= MENU ============================= -->
+    <menuitem id="non_invoiced_order_menu"
+              name="Non Invoiced Orders"
+              parent="account.menu_finance_receivables"
+              action="non_invoiced_order_action"
+              sequence="90"/>
+
+</odoo>

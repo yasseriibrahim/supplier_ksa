@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="supplier_ksa.SupplierDashboard">
+        <div class="o_supplier_dashboard">
+            <div class="sd_hero">
+                <div>
+                    <div class="sd_eyebrow">OPERATIONS COMMAND CENTER</div>
+                    <h1>Dashboard</h1>
+                    <p><t t-esc="data.company"/> · <t t-esc="data.today"/></p>
+                </div>
+                <div class="sd_health">
+                    <span class="sd_pulse"/> Live financial and stock priorities
+                </div>
+            </div>
+
+            <div class="sd_kpis">
+                <div class="sd_kpi sd_blue" t-on-click="() => this.openRecords('partner.contract', data.active_contract_ids)">
+                    <i class="fa fa-file-text-o"/><span>Active Contracts</span>
+                    <strong t-esc="data.kpis.active_contracts"/>
+                    <small>currently running</small>
+                </div>
+                <div class="sd_kpi sd_red" t-on-click="() => this.openRecords('partner.payment.installment', data.overdue_installments.map(r => r.id))">
+                    <i class="fa fa-calendar-times-o"/><span>Contract Collections</span>
+                    <strong t-esc="data.kpis.overdue_contract_count"/>
+                    <small t-esc="money(data.kpis.overdue_contract_amount)"/>
+                </div>
+                <div class="sd_kpi sd_orange" t-on-click="() => this.openRecords('account.move', data.overdue_invoices.map(r => r.id))">
+                    <i class="fa fa-exclamation-circle"/><span>Overdue Invoices</span>
+                    <strong t-esc="data.kpis.overdue_invoice_count"/>
+                    <small t-esc="money(data.kpis.overdue_invoice_amount)"/>
+                </div>
+                <div class="sd_kpi sd_violet" t-on-click="() => this.openRecords('account.move', data.unpaid_invoice_ids)">
+                    <i class="fa fa-money"/><span>All Unpaid Invoices</span>
+                    <strong t-esc="data.kpis.unpaid_invoice_count"/>
+                    <small t-esc="money(data.kpis.unpaid_invoice_amount)"/>
+                </div>
+                <div class="sd_kpi sd_green" t-on-click="() => this.openRecords('product.product', data.stock_product_ids)">
+                    <i class="fa fa-cubes"/><span>Stock Attention</span>
+                    <strong><t t-esc="data.kpis.out_stock_count"/> / <t t-esc="data.kpis.low_stock_count"/></strong>
+                    <small>out / low stock</small>
+                </div>
+            </div>
+
+            <div class="sd_grid">
+                <section class="sd_panel sd_span2">
+                    <div class="sd_panel_head"><div><span class="sd_dot red"/><h2>Collections requiring action</h2></div><small>Overdue contract installments</small></div>
+                    <div class="sd_empty" t-if="!data.overdue_installments.length"><i class="fa fa-check-circle"/> No overdue contract collections</div>
+                    <div class="sd_table_wrap" t-else="">
+                        <table><thead><tr><th>Customer</th><th>Contract</th><th>Due date</th><th>Delay</th><th>Remaining</th></tr></thead>
+                        <tbody><tr t-foreach="data.overdue_installments" t-as="row" t-key="row.id" t-on-click="() => this.openRecord('partner.contract', row.contract_id)">
+                            <td t-esc="row.partner"/><td t-esc="row.contract"/><td t-esc="row.due_date"/>
+                            <td><span class="sd_badge danger"><t t-esc="row.days"/> days</span></td><td class="sd_money" t-esc="money(row.remaining)"/>
+                        </tr></tbody></table>
+                    </div>
+                </section>
+
+                <section class="sd_panel">
+                    <div class="sd_panel_head"><div><span class="sd_dot amber"/><h2>Next 30 days</h2></div><small>Contract payments</small></div>
+                    <div class="sd_empty" t-if="!data.upcoming_installments.length">No upcoming collections</div>
+                    <div class="sd_feed" t-else=""><div class="sd_feed_item" t-foreach="data.upcoming_installments" t-as="row" t-key="row.id" t-on-click="() => this.openRecord('partner.contract', row.contract_id)">
+                        <div><strong t-esc="row.partner"/><small><t t-esc="row.contract"/> · <t t-esc="row.due_date"/></small></div>
+                        <div class="sd_right"><b t-esc="money(row.remaining)"/><span><t t-esc="row.days"/> days</span></div>
+                    </div></div>
+                </section>
+
+                <section class="sd_panel">
+                    <div class="sd_panel_head"><div><span class="sd_dot red"/><h2>Invoices to collect</h2></div><small>Past due</small></div>
+                    <div class="sd_empty" t-if="!data.overdue_invoices.length">No overdue invoices</div>
+                    <div class="sd_feed" t-else=""><div class="sd_feed_item" t-foreach="data.overdue_invoices" t-as="row" t-key="row.id" t-on-click="() => this.openRecord('account.move', row.id)">
+                        <div><strong t-esc="row.partner"/><small><t t-esc="row.name"/> · <t t-esc="row.due_date"/></small></div>
+                        <div class="sd_right"><b t-esc="money(row.residual)"/><span class="danger"><t t-esc="row.days"/> days late</span></div>
+                    </div></div>
+                </section>
+
+                <section class="sd_panel sd_span2">
+                    <div class="sd_panel_head"><div><span class="sd_dot amber"/><h2>Products requiring quantity update</h2></div><small>5 units or fewer by internal location</small></div>
+                    <div class="sd_empty" t-if="!data.stock_rows.length"><i class="fa fa-check-circle"/> Stock levels look healthy</div>
+                    <div class="sd_stock_grid" t-else=""><div t-foreach="data.stock_rows" t-as="row" t-key="row.product_id + '-' + row.location_id" t-att-class="'sd_stock_item ' + row.level" t-on-click="() => this.openRecord('product.product', row.product_id)">
+                        <div class="sd_stock_icon"><i class="fa fa-cube"/></div>
+                        <div class="sd_stock_name"><strong t-esc="row.product"/><small t-esc="row.location"/></div>
+                        <div class="sd_qty"><b t-esc="row.quantity"/><span t-esc="row.level === 'out' ? 'OUT' : 'LOW'"/></div>
+                    </div></div>
+                </section>
+
+                <section class="sd_panel">
+                    <div class="sd_panel_head"><div><span class="sd_dot blue"/><h2>Invoices due soon</h2></div><small>Next 30 days</small></div>
+                    <div class="sd_empty" t-if="!data.due_soon_invoices.length">No invoices due soon</div>
+                    <div class="sd_feed" t-else=""><div class="sd_feed_item" t-foreach="data.due_soon_invoices" t-as="row" t-key="row.id" t-on-click="() => this.openRecord('account.move', row.id)">
+                        <div><strong t-esc="row.partner"/><small><t t-esc="row.name"/> · <t t-esc="row.due_date"/></small></div>
+                        <div class="sd_right"><b t-esc="money(row.residual)"/><span><t t-esc="row.days"/> days</span></div>
+                    </div></div>
+                </section>
+            </div>
+        </div>
+    </t>
+</templates>

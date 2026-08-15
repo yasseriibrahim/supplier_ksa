@@ -1,0 +1,609 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="custom_invoice_report_template" name="Custom Invoice Report">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="is_rtl" t-value="o.partner_id.lang and o.env['res.lang'].search([('code','=',o.partner_id.lang)]).direction == 'rtl'"/>
+                <t t-set="lang_dir" t-value="'rtl' if is_rtl else 'ltr'"/>
+                <t t-call="web.basic_layout">
+                    <t t-set="header" t-value="False"/>
+                    <style>
+                        @page {
+                            margin-top: 10mm !important;
+                        }
+
+                        .o_report_layout_standard .page {
+                            margin-top: 0px !important;
+                            padding-top: 0px !important;
+                            padding-bottom: 60px;
+
+                        }
+                        body, .page { margin: 0 !important; padding: 0 !important; }
+                        .ci-page { font-family: Arial, sans-serif; font-size: 10pt; color: #1e293b; background: #fff; }
+
+                        /* HEADER */
+                        .ci-header { background: #f8f8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                            border-radius: 10px; padding: 20px 24px; margin-bottom: 14px;
+                            border: 1px solid #e0e0e0; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+                        .ci-header table { width: 100%; border-collapse: collapse; }
+                        .ci-header td { vertical-align: top; border: none; padding: 0; }
+                        .ci-logo { width: 120px; height: 120px; object-fit: contain; border-radius: 6px;
+                            border: 1px solid #e0e0e0; padding: 4px; }
+                        .ci-logo-fallback { width: 120px; height: 120px; border-radius: 6px; background: #f0f0f0 !important;
+                            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                            text-align: center; font-size: 24pt; font-weight: 800; color: #222; line-height: 70px; }
+                        .ci-company-name { font-size: 14pt; font-weight: 800; color: #111; margin-bottom: 4px; }
+                        .ci-company-sub  { font-size: 8pt; color: #444; line-height: 1.6; }
+                        .ci-meta-lbl { font-size: 7.5pt; color: #555; padding: 1px 10px 1px 0; white-space: nowrap; }
+                        .ci-meta-val { font-size: 8.5pt; color: #111; font-weight: 600; padding: 1px 0; }
+                        .ci-pill { display: inline-block; font-size: 7pt; font-weight: 700; padding: 2px 8px;
+                            border-radius: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .ci-pill-paid       { background: #d1fae5 !important; color: #065f46; border: 1px solid #6ee7b7; }
+                        .ci-pill-partial    { background: #fef3c7 !important; color: #92400e; border: 1px solid #fcd34d; }
+                        .ci-pill-in_payment { background: #dbeafe !important; color: #1e40af; border: 1px solid #93c5fd; }
+                        .ci-pill-not_paid   { background: #fee2e2 !important; color: #991b1b; border: 1px solid #fca5a5; }
+
+                        /* BADGE */
+                        .ci-badge-wrap { text-align: center; margin-bottom: 14px; }
+                        .ci-badge { display: inline-block; background: #f5f5f5 !important; color: #111;
+                            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                            font-size: 12pt; font-weight: 800; letter-spacing: 1px; padding: 6px 28px;
+                            border-radius: 24px; line-height: 1.4;
+                            border: 1px solid #ddd; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+                        .ci-badge-en { font-size: 11pt; display: block; }
+                        .ci-badge-ar { font-size: 10pt; display: block; }
+
+                        /* PARTIES */
+                        .ci-parties { width: 100%; border-collapse: collapse; margin-bottom: 14px;
+                            border: 1px solid #ddd; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+                        .ci-party-hdr { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                            color: #111; text-align: center; padding: 8px 12px; border-bottom: 1px solid #ddd; }
+                        .ci-party-hdr-en { font-size: 11pt; font-weight: 800; display: block; letter-spacing: 1.5px; }
+                        .ci-party-hdr-ar { font-size: 10pt; font-weight: 700; display: block; margin-top: 2px; }
+                        .ci-party-cell { padding: 0; vertical-align: top; width: 50%; }
+                        .ci-party-from-cell { background: #fafafa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                            border-right: 1px solid #ddd; }
+                        .ci-party-to-cell { background: #ffffff; }
+                        .ci-party-name-row { padding: 8px 14px; font-size: 10pt; font-weight: 800; color: #111;
+                            border-bottom: 1px solid #ddd; background: #f5f5f5 !important;
+                            -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .ci-party-to-cell .ci-party-name-row { background: #f9f9f9 !important; }
+                        .ci-field-lbl-td { width: 38%; border-bottom: 1px solid #ebebeb; padding: 5px 6px 5px 14px;
+                            font-size: 8pt; font-weight: 700; color: #333; white-space: nowrap; vertical-align: top; }
+                        .ci-field-val-td { border-bottom: 1px solid #ebebeb; padding: 5px 14px 5px 6px;
+                            font-size: 8.5pt; color: #111; vertical-align: top; }
+
+                        /* LINES TABLE */
+                        .ci-lines { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 14px;
+                            border: 1px solid #ddd; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+                        .ci-thead { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .ci-th { padding: 8px; color: #111; font-weight: 700; border-bottom: 2px solid #ccc; white-space: nowrap; }
+                        .ci-th-en { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5px; display: block; }
+                        .ci-th-ar { font-size: 7pt; display: block; margin-top: 1px; color: #444; }
+                        .ci-th-c { text-align: center; }
+                        .ci-th-r { text-align: right; }
+                        .ci-th-l { text-align: left; }
+                        .ci-row-odd  { background: #ffffff; }
+                        .ci-row-even { background: #fafafa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .ci-td { padding: 8px; border-bottom: 1px solid #ebebeb; vertical-align: top; color: #111; }
+                        .ci-td-c { text-align: center; }
+                        .ci-td-r { text-align: right; }
+                        .ci-td-muted { color: #555; }
+                        .ci-td-bold  { font-weight: 700; color: #111; }
+                        .ci-section-row { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .ci-section-td  { padding: 7px 10px; font-weight: 700; color: #111; border-bottom: 1px solid #ccc; }
+                        .ci-note-td     { padding: 5px 10px; font-size: 8.5pt; color: #555; font-style: italic; border-bottom: 1px dashed #ddd; }
+
+                        /* TOTALS */
+                        .ci-totals { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+                        .ci-notes-td { vertical-align: top; font-size: 8.5pt; color: #444;
+                            background: #fafafa; border: 1px solid #e0e0e0; padding: 12px 14px;
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+                        .ci-notes-title { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; color: #333; margin-bottom: 3px; }
+                        .ci-totals-td { vertical-align: top; width: 260px; }
+                        .ci-total-row { width: 100%; border-collapse: collapse;
+                            border: 1px solid #e0e0e0; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+                        .ci-total-lbl { font-size: 9pt; color: #444; font-weight: 500; padding: 4px 8px; }
+                        .ci-total-val { font-size: 9pt; font-weight: 600; color: #111; text-align: right; padding: 4px 8px; }
+                        .ci-divider { border: none; border-top: 2px solid #ccc; margin: 6px 0; }
+                        .ci-grand-lbl { font-size: 11pt; font-weight: 800; color: #111; padding: 6px 8px; }
+                        .ci-grand-val { font-size: 12pt; font-weight: 800; color: #111; text-align: right; padding: 6px 8px; }
+                        .ci-paid-stamp { text-align: center; font-size: 14pt; font-weight: 800; color: #065f46;
+                            border: 3px solid #6ee7b7; border-radius: 6px; padding: 4px 8px; margin-top: 8px;
+                            background: #d1fae5 !important;
+                            -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+                        /* FOOTER */
+                        .ci-footer { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                            border-radius: 8px; padding: 10px 18px; margin-top: 6px;
+                            border: 1px solid #ddd; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+                        .ci-footer table { width: 100%; border-collapse: collapse; }
+                        .ci-footer td { vertical-align: middle; border: none; padding: 0; font-size: 7.5pt; color: #333; }
+                        .ci-footer-ref { color: #111; font-weight: 700; font-size: 8pt; }
+                        .ci-footer-center { text-align: center; }
+                        .ci-footer-right  { text-align: right; }
+                    </style>
+
+                <div class="ci-page">
+
+                <!-- ══ TOP BAR: QR + TITLE ══ -->
+                <table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+                    <tr>
+                        <!-- QR Code left -->
+                        <td style="width:110px; vertical-align:middle; padding-right:14px;">
+                            <t t-if="o.qr">
+                                <img t-att-src="image_data_uri(o.qr)"
+                                     style="width:100px; height:100px;"
+                                     alt="QR Code"/>
+                            </t>
+                        </td>
+                        <!-- Title badge center -->
+                        <td style="vertical-align:middle; text-align:center;">
+                            <div class="ci-badge">
+                                <t t-if="o._name == 'sale.order'">
+                                    <span class="ci-badge-en">QUOTATION</span>
+                                    <span class="ci-badge-ar">عرض سعر</span>
+                                </t>
+                                <t t-elif="o.move_type == 'out_invoice'">
+                                    <span class="ci-badge-en">VAT INVOICE</span>
+                                    <span class="ci-badge-ar">فاتورة ضريبية</span>
+                                </t>
+                                <t t-elif="o.move_type == 'out_refund'">
+                                    <span class="ci-badge-en">CREDIT NOTE</span>
+                                    <span class="ci-badge-ar">إشعار دائن</span>
+                                </t>
+                                <t t-elif="o.move_type == 'in_invoice'">
+                                    <span class="ci-badge-en">VENDOR BILL</span>
+                                    <span class="ci-badge-ar">فاتورة مورد</span>
+                                </t>
+                                <t t-else="">
+                                    <span class="ci-badge-en">ACCOUNTING ENTRY</span>
+                                    <span class="ci-badge-ar">مستند محاسبي</span>
+                                </t>
+                            </div>
+                        </td>
+                        <!-- Logo right -->
+                        <td style="width:130px; vertical-align:middle; text-align:right; padding-left:14px;">
+                            <t t-if="o.company_id.logo">
+                                <img t-att-src="image_data_uri(o.company_id.logo)" class="ci-logo" alt="Logo"/>
+                            </t>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- ══ HEADER ══ -->
+                <div class="ci-header">
+                    <table><tr>
+                        <td style="vertical-align:top;">
+                            <table>
+                                <tr>
+                                    <td style="vertical-align:top; padding-right:14px;">
+                                        <t t-if="o.company_id.logo">
+                                            <img t-att-src="image_data_uri(o.company_id.logo)" class="ci-logo" alt="Logo"/>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="ci-logo-fallback"><t t-esc="o.company_id.name[0:2].upper()"/></div>
+                                        </t>
+                                    </td>
+                                    <td style="vertical-align:top;">
+                                        <table style="border-collapse:collapse; width:100%;">
+                                            <tr>
+                                                <td class="ci-company-name" colspan="2" t-esc="o.company_id.name"/>
+                                            </tr>
+                                            <t t-if="o.company_id.vat">
+                                                <tr>
+                                                    <td class="ci-company-sub" t-esc="o.company_id.vat"/>
+                                                    <td class="ci-company-sub" style="padding-right:4px;">الرقم الضريبي:</td>
+                            
+                                                </tr>
+                                            </t>
+                                            <t t-if="o.company_id.partner_id.bank_ids">
+                                                <t t-set="bank" t-value="o.company_id.partner_id.bank_ids[0]"/>
+                                                <tr>
+                                                    <td class="ci-company-sub"><strong t-esc="bank.acc_number"/></td>
+                                                    <td class="ci-company-sub" style="padding-right:4px;">رقم الحساب:</td>
+                                                    
+                                                </tr>
+                                                <t t-if="o.company_id.partner_id.x_iban">
+                                                    <tr>
+                                                        <td class="ci-company-sub"><strong t-esc="o.company_id.partner_id.x_iban"/></td>
+                                                        <td class="ci-company-sub" style="padding-right:4px;">IBAN</td>
+                                                        
+                                                    </tr>
+                                                </t>
+                                                <t t-if="bank.bank_id">
+                                                    <tr>
+                                                        
+                                                        <td class="ci-company-sub"><strong t-esc="bank.bank_id.name"/></td>
+                                                        <td class="ci-company-sub" style="padding-right:4px;">البنك:</td>
+                                                    </tr>
+                                                </t>
+                                            </t>
+                                            <t t-if="o.driver_name">
+                                                <tr>
+                                                    <td class="ci-company-sub"><strong t-esc="o.driver_name.name"/></td>
+                                                    <td class="ci-company-sub" style="padding-right:4px;">المندوب:</td>
+                                                    
+                                                </tr>
+                                            </t>
+                                            <t t-if="o.invoice_region">
+                                                <tr>
+                                                    <td class="ci-company-sub"><strong t-esc="o.invoice_region"/></td>
+                                                    <td class="ci-company-sub" style="padding-right:4px;">المنطقة:</td>
+                                                    
+                                                </tr>
+                                            </t>
+                                            <t t-if="o.company_id.phone">
+                                                <tr>
+                                                    <td class="ci-company-sub" t-esc="o.company_id.phone"/>
+                                                    <td class="ci-company-sub" style="padding-right:4px;">الهاتف:</td>
+                                                    
+                                                </tr>
+                                            </t>
+                                            <t t-if="o.company_id.email">
+                                                <tr>
+                                                    <td class="ci-company-sub" t-esc="o.company_id.email"/>
+                                                    <td class="ci-company-sub" style="padding-right:4px;">البريد:</td>
+                                                    
+                                                </tr>
+                                            </t>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="vertical-align:top; text-align:right; width:230px;">
+                            <table style="border:1px solid #ddd; border-collapse:collapse; margin-left:auto; width:100%;">
+                                <tr style="background:#f5f5f5;">
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px;" t-esc="o.name or '—'"/>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">
+                                        <t t-if="o._name == 'sale.order'">Quotation No. / رقم عرض السعر</t>
+                                        <t t-else="">Invoice No. / رقم الفاتورة</t>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <t t-set="print_dt" t-value="context_timestamp(datetime.datetime.now())"/>
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px;">
+                                        <t t-esc="print_dt.strftime('%Y-%m-%d %H:%M:%S')"/>
+                                    </td>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">Print Date &amp; Time / تاريخ ووقت الطباعة</td>
+                                </tr>
+                                <tr>
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px;"><t t-esc="o.invoice_date" t-options='{"widget":"date"}'/></td>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">
+                                        <t t-if="o._name == 'sale.order'">Quotation Date / تاريخ عرض السعر</t>
+                                        <t t-else="">Invoice Date / تاريخ الإصدار</t>
+                                    </td>
+                                </tr>
+                                <tr t-if="o.invoice_date_due" style="background:#f5f5f5;">
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px; color:#c2410c;"><t t-esc="o.invoice_date_due" t-options='{"widget":"date"}'/></td>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">
+                                        <t t-if="o._name == 'sale.order'">Valid Until / صالح حتى</t>
+                                        <t t-else="">Due Date / تاريخ الاستحقاق</t>
+                                    </td>
+                                </tr>
+                                <tr t-if="o.ref">
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px;" t-esc="o.ref"/>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">Reference / المرجع</td>
+                                </tr>
+                                <tr t-if="o.collect_type" style="background:#f5f5f5;">
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px;" t-esc="o.collect_type"/>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">Payment Way / طريقة الدفع</td>
+                                </tr>
+                                <tr t-if="o.branch_name">
+                                    <td class="ci-meta-val" style="border:1px solid #ddd; padding:5px 8px;" t-esc="o.branch_name"/>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">Branch / الفرع</td>
+                                </tr>
+                                <tr style="background:#f5f5f5;">
+                                    <td style="border:1px solid #ddd; padding:5px 8px;">
+                                        <t t-if="o._name == 'sale.order'">
+                                            <span class="ci-pill ci-pill-in_payment">
+                                                <t t-if="o.state in ('sale', 'done')">SALES ORDER / أمر بيع</t>
+                                                <t t-else="">QUOTATION / عرض سعر</t>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-set="pstate" t-value="o.payment_state"/>
+                                            <span t-attf-class="ci-pill ci-pill-#{pstate}">
+                                                <t t-if="pstate == 'paid'">PAID / مدفوعة</t>
+                                                <t t-elif="pstate == 'partial'">PARTIAL / جزئي</t>
+                                                <t t-elif="pstate == 'in_payment'">IN PAYMENT / قيد الدفع</t>
+                                                <t t-else="">UNPAID / غير مدفوعة</t>
+                                            </span>
+                                        </t>
+                                    </td>
+                                    <td class="ci-meta-lbl" style="border:1px solid #ddd; padding:5px 8px;">Status / الحالة</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr></table>
+                </div>
+
+
+                <!-- ══ CENTERED BADGE ══ -->
+<!--                <div class="ci-badge-wrap">-->
+<!--                    <div class="ci-badge">-->
+<!--                        <t t-if="o.move_type == 'out_invoice'">-->
+<!--                            <span class="ci-badge-en">VAT INVOICE</span>-->
+<!--                            <span class="ci-badge-ar">فاتورة ضريبية</span>-->
+<!--                        </t>-->
+<!--                        <t t-elif="o.move_type == 'out_refund'">-->
+<!--                            <span class="ci-badge-en">CREDIT NOTE</span>-->
+<!--                            <span class="ci-badge-ar">إشعار دائن</span>-->
+<!--                        </t>-->
+<!--                        <t t-elif="o.move_type == 'in_invoice'">-->
+<!--                            <span class="ci-badge-en">VENDOR BILL</span>-->
+<!--                            <span class="ci-badge-ar">فاتورة مورد</span>-->
+<!--                        </t>-->
+<!--                        <t t-else="">-->
+<!--                            <span class="ci-badge-en">ACCOUNTING ENTRY</span>-->
+<!--                            <span class="ci-badge-ar">مستند محاسبي</span>-->
+<!--                        </t>-->
+<!--                    </div>-->
+<!--                </div>-->
+
+                <!-- ══ PARTIES ══ -->
+                <table class="ci-parties">
+                    <thead><tr>
+                        <th class="ci-party-hdr" style="width:50%; border-right:2px solid #0e7490;">
+                            <span class="ci-party-hdr-en">FROM</span>
+                            <span class="ci-party-hdr-ar">من</span>
+                        </th>
+                        <th class="ci-party-hdr" style="width:50%;">
+                            <span class="ci-party-hdr-en">BILL TO</span>
+                            <span class="ci-party-hdr-ar">إلى / العميل</span>
+                        </th>
+                    </tr></thead>
+                    <tbody><tr>
+                        <!-- FROM -->
+                        <td class="ci-party-cell ci-party-from-cell">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <tr><td class="ci-party-name-row" colspan="2" t-esc="o.company_id.name"/></tr>
+                                <t t-if="o.company_id.vat">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">VAT ID / الرقم الضريبي</td>
+                                        <td class="ci-field-val-td" t-esc="o.company_id.vat"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.company_id.street">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Address / العنوان</td>
+                                        <td class="ci-field-val-td" t-esc="o.company_id.street"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.company_id.city">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">City / المدينة</td>
+                                        <td class="ci-field-val-td" t-esc="o.company_id.city"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.company_id.country_id">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Country / الدولة</td>
+                                        <td class="ci-field-val-td" t-esc="o.company_id.country_id.name"/>
+                                    </tr>
+                                </t>
+                            </table>
+                        </td>
+                        <!-- BILL TO -->
+                        <td class="ci-party-cell ci-party-to-cell">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <tr><td class="ci-party-name-row" colspan="2" t-esc="o.partner_id.name"/></tr>
+                                <t t-if="o.partner_id.vat">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">VAT ID / الرقم الضريبي</td>
+                                        <td class="ci-field-val-td" t-esc="o.partner_id.vat"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.partner_id.street">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Address / العنوان</td>
+                                        <td class="ci-field-val-td" t-esc="o.partner_id.street"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.partner_id.city">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">City / المدينة</td>
+                                        <td class="ci-field-val-td" t-esc="o.partner_id.city"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.partner_id.country_id">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Country / الدولة</td>
+                                        <td class="ci-field-val-td" t-esc="o.partner_id.country_id.name"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o.partner_id.phone">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Phone / الهاتف</td>
+                                        <td class="ci-field-val-td" t-esc="o.partner_id.phone"/>
+                                    </tr>
+                                </t>
+                            </table>
+                        </td>
+                    </tr></tbody>
+                </table>
+
+                <!-- ══ LINES TABLE ══ -->
+                <table class="ci-lines">
+                    <thead class="ci-thead">
+                        <tr>
+                            <th class="ci-th ci-th-c" style="width:30px;"><span class="ci-th-en">#</span></th>
+                            <th class="ci-th ci-th-l">
+                                <span class="ci-th-en">DESCRIPTION/اسم الصنف</span>
+<!--                                <span class="ci-th-ar">اسم الصنف</span>-->
+                            </th>
+                            <th class="ci-th ci-th-r" style="width:55px;">
+                                <span class="ci-th-en">QTY/الكمية</span>
+<!--                                <span class="ci-th-ar">الكمية</span>-->
+                            </th>
+                            <th class="ci-th ci-th-c" style="width:50px;">
+                                <span class="ci-th-en">UNIT/الوحدة</span>
+<!--                                <span class="ci-th-ar">الوحدة</span>-->
+                            </th>
+                            <th class="ci-th ci-th-r" style="width:85px;">
+                                <span class="ci-th-en">UNIT PRICE/سعر القطعة</span>
+<!--                                <span class="ci-th-ar">سعر القطعة</span>-->
+                            </th>
+                            <th class="ci-th ci-th-r" style="width:50px;" t-if="o.invoice_line_ids.filtered(lambda l: l.discount)">
+                                <span class="ci-th-en">DISC%/خصم%</span>
+<!--                                <span class="ci-th-ar">خصم%</span>-->
+                            </th>
+<!--                            <th class="ci-th ci-th-c" style="width:80px;">-->
+<!--                                <span class="ci-th-en">VAT/الضريبة</span>-->
+<!--                                <span class="ci-th-ar">الضريبة</span>-->
+<!--                            </th>-->
+                            <th class="ci-th ci-th-r" style="width:95px;">
+                                <span class="ci-th-en">SUBTOTAL/إجمالي الصنف</span>
+<!--                                <span class="ci-th-ar">إجمالي الصنف</span>-->
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-set="line_idx" t-value="0"/>
+                        <t t-foreach="o.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section','line_note') or l.name)" t-as="line">
+                            <t t-if="line.display_type == 'line_section'">
+                                <tr class="ci-section-row">
+                                    <td colspan="7" class="ci-section-td" t-esc="line.name"/>
+                                </tr>
+                            </t>
+                            <t t-elif="line.display_type == 'line_note'">
+                                <tr><td colspan="7" class="ci-td ci-note-td" t-esc="line.name"/></tr>
+                            </t>
+                            <t t-else="">
+                                <t t-set="line_idx" t-value="line_idx + 1"/>
+                                <tr t-attf-class="#{('ci-row-even' if line_idx % 2 == 0 else 'ci-row-odd')}">
+                                    <td class="ci-td ci-td-c ci-td-muted" t-esc="line_idx"/>
+                                    <td class="ci-td">
+                                        <div style="font-weight:500;" t-esc="line.name"/>
+                                        <t t-if="line.product_id and line.product_id.default_code">
+                                            <div style="font-size:7.5pt; color:#64748b;">[<t t-esc="line.product_id.default_code"/>]</div>
+                                        </t>
+                                    </td>
+                                    <td class="ci-td ci-td-r" t-esc="line.quantity"/>
+                                    <td class="ci-td ci-td-c ci-td-muted" t-esc="line.product_uom_id.name if line.product_uom_id else ''"/>
+                                    <td class="ci-td ci-td-r">
+                                        <t t-esc="line.price_unit" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                    </td>
+                                    <td class="ci-td ci-td-r" t-if="o.invoice_line_ids.filtered(lambda l: l.discount)">
+                                        <t t-if="line.discount"><t t-esc="str(round(line.discount, 1)) + '%'"/></t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                    <td class="ci-td ci-td-r ci-td-bold">
+                                        <t t-esc="line.price_subtotal" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </t>
+                    </tbody>
+                </table>
+
+                <!-- ══ TOTALS ══ -->
+                <table class="ci-totals"><tr>
+                    <td class="ci-notes-td">
+                        <t t-if="o.narration">
+                            <div class="ci-notes-title">Notes / ملاحظات</div>
+                            <div t-out="o.narration"/>
+                        </t>
+                        <t t-if="o.invoice_payment_term_id">
+                            <div class="ci-notes-title" style="margin-top:8px;">Payment Terms / شروط الدفع</div>
+                            <div t-esc="o.invoice_payment_term_id.name"/>
+                        </t>
+                    </td>
+                    <td style="width:16px;"/>
+                    <td class="ci-totals-td">
+                        <table class="ci-total-row">
+                            <tr>
+                                <td class="ci-total-lbl">Subtotal/المجموع قبل الضريبة</td>
+                                <td class="ci-total-val">
+                                    <t t-esc="o.amount_untaxed" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                </td>
+                            </tr>
+                            <t t-if="o.amount_discount">
+                                <tr>
+                                    <td class="ci-total-lbl" style="color:#d97706;">Discount/الخصم</td>
+                                    <td class="ci-total-val" style="color:#d97706;">
+                                        -<t t-esc="o.amount_discount" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </t>
+                            <t t-foreach="o.tax_totals['subtotals']" t-as="subtotal">
+                                <t t-foreach="subtotal['tax_groups']" t-as="tax_group">
+                                    <tr>
+<!--                                        <td class="ci-total-lbl" style="font-size:8.5pt;" t-esc="tax_group['tax_group_name']"/>-->
+                                        <td class="ci-total-lbl">VAT/مجموع الضريبة</td>
+                                        <td class="ci-total-val">
+                                            <t t-esc="tax_group['tax_amount_currency']" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </t>
+                            <tr><td colspan="2"><hr class="ci-divider"/></td></tr>
+                            <tr>
+                                <td class="ci-grand-lbl">TOTAL/الإجمالي الكلي</td>
+                                <td class="ci-grand-val">
+                                    <t t-esc="o.amount_total" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="padding:5px 0; font-size:8.5pt; color:#0e7490; font-style:italic; border-top:1px dashed #cbd5e1;">
+                                    <t t-esc="o.amount_total_words"/>
+                                </td>
+                            </tr>
+                            <t t-if="o._name != 'sale.order' and o.amount_residual != o.amount_total and o.payment_state != 'paid'">
+                                <tr>
+                                    <td class="ci-total-lbl" style="color:#c2410c;">Amount Due/المبلغ المتبقي</td>
+                                    <td class="ci-total-val" style="color:#c2410c;">
+                                        <t t-esc="o.amount_residual" t-options='{"widget":"monetary","display_currency":o.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </t>
+                            <t t-if="o._name != 'sale.order' and o.payment_state == 'paid'">
+                                <tr><td colspan="2">
+                                    <div class="ci-paid-stamp">PAID/مدفوعة ✓</div>
+                                </td></tr>
+                            </t>
+                        </table>
+                    </td>
+                </tr></table>
+
+                <!-- ══ FOOTER ══ -->
+                <div class="ci-footer">
+                    <table><tr>
+                        <td>
+                            <t t-if="o.company_id.partner_id.bank_ids">
+                                <t t-set="bank" t-value="o.company_id.partner_id.bank_ids[0]"/>
+                                <span>رقم الحساب: <strong t-esc="bank.acc_number"/></span>
+                                <t t-if="bank.bank_id">
+                                    <span> | البنك: <strong t-esc="bank.bank_id.name"/></span>
+                                </t>
+                                <t t-if="o.company_id.partner_id.x_iban">
+                                    <span> | IBAN: <strong t-esc="o.company_id.partner_id.x_iban"/></span>
+                                </t>
+                            </t>
+                            <div style="color:#555; font-size:7pt; margin-top:2px;" t-esc="o.company_id.name"/>
+                        </td>
+                        <td class="ci-footer-center">
+                            <div style="color:#333;">
+                                Page / صفحة <span class="page"/>
+                            </div>
+                        </td>
+                        <td class="ci-footer-right">
+                            <div style="color:#555; font-size:7pt;">Generated by Accounting System</div>
+                            <div class="ci-footer-ref" t-esc="o.name"/>
+                        </td>
+                    </tr></table>
+                </div>
+
+
+
+                </div><!-- /ci-page -->
+                </t><!-- /basic_layout -->
+            </t><!-- /foreach -->
+        </t><!-- /html_container -->
+    </template>
+
+    <template id="custom_quotation_report_template" name="Custom Quotation Report">
+        <t t-call="supplier_ksa.custom_invoice_report_template"/>
+    </template>
+</odoo>

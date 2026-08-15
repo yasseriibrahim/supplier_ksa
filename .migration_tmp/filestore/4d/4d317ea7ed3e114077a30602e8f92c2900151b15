@@ -1,0 +1,67 @@
+
+                .o_company_2_layout {
+                font-family: Lato;
+                &.o_report_layout_standard {
+                    h2 {
+                        color: #555555;
+                    }
+                    #informations strong {
+                        color: #000000;
+                    }
+                    #total strong{
+                        color: #555555;
+                    }
+                    .totals_taxes_company_currency strong{
+                        color: #555555;
+                    }
+                    table {
+                        thead {
+                            color: #000000;
+                        }
+                    }
+                }
+            }
+                .o_company_3_layout {
+                font-family: Lato;
+                &.o_report_layout_standard {
+                    h2 {
+                        color: black;
+                    }
+                    #informations strong {
+                        color: black;
+                    }
+                    #total strong{
+                        color: black;
+                    }
+                    .totals_taxes_company_currency strong{
+                        color: black;
+                    }
+                    table {
+                        thead {
+                            color: black;
+                        }
+                    }
+                }
+            }
+                .o_company_1_layout {
+                font-family: Lato;
+                &.o_report_layout_standard {
+                    h2 {
+                        color: #254736;
+                    }
+                    #informations strong {
+                        color: #afa395;
+                    }
+                    #total strong{
+                        color: #254736;
+                    }
+                    .totals_taxes_company_currency strong{
+                        color: #254736;
+                    }
+                    table {
+                        thead {
+                            color: #afa395;
+                        }
+                    }
+                }
+            }

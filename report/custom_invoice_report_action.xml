@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_custom_invoice" model="report.paperformat">
+        <field name="name">Custom Invoice Paper</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">5</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_custom_invoice_report" model="ir.actions.report">
+        <field name="name">Custom Invoice</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">supplier_ksa.custom_invoice_report_template</field>
+        <field name="report_file">supplier_ksa.custom_invoice_report_template</field>
+        <field name="print_report_name">
+            (object.partner_id.name or 'Customer').replace('/', '_') + '_' + (object.name or 'Invoice').replace('/', '_')
+        </field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="supplier_ksa.paperformat_custom_invoice"/>
+    </record>
+
+    <record id="action_custom_quotation_report" model="ir.actions.report">
+        <field name="name">Custom Quotation</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">supplier_ksa.custom_quotation_report_template</field>
+        <field name="report_file">supplier_ksa.custom_quotation_report_template</field>
+        <field name="print_report_name">'Quotation_' + (object.name or '').replace('/', '_')</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="supplier_ksa.paperformat_custom_invoice"/>
+    </record>
+</odoo>

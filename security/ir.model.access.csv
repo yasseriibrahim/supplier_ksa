@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_payment_profile_user,partner.payment.profile user,model_partner_payment_profile,base.group_user,1,1,1,1
+access_payment_installment_user,partner.payment.installment user,model_partner_payment_installment,base.group_user,1,1,1,1
+access_payment_generate_wizard,partner.payment.generate.wizard,model_partner_payment_generate_wizard,base.group_user,1,1,1,1
+access_payment_generate_preview,partner.payment.generate.wizard.preview,model_partner_payment_generate_wizard_preview,base.group_user,1,1,1,1
+access_partner_contract_user,partner.contract user,model_partner_contract,base.group_user,1,1,1,1
+access_non_invoiced_order,non_invoiced_order,model_non_invoiced_order,,1,1,1,1
+access_non_invoiced_order_line,non_invoiced_order_line,model_non_invoiced_order_line,,1,1,1,1
+access_custodian_product_product,warehouse.custodian product variant,product.model_product_product,supplier_ksa.group_warehouse_custodian,1,1,1,0
+access_custodian_product_template,warehouse.custodian product template,product.model_product_template,supplier_ksa.group_warehouse_custodian,1,1,1,0
+access_custodian_stock_location,warehouse.custodian stock location,stock.model_stock_location,supplier_ksa.group_warehouse_custodian,1,0,0,0
+access_supplier_dashboard,supplier.dashboard,model_supplier_dashboard,account.group_account_user,1,0,0,0

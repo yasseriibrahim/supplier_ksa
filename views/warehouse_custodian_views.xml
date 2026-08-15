@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_users_form_warehouse_custodian" model="ir.ui.view">
+        <field name="name">res.users.form.warehouse.custodian</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='company_id']" position="after">
+                <field name="custodian_location_id"
+                       string="Warehouse Custodian Location"
+                       groups="base.group_system"
+                       options="{'no_create': True}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Use Odoo's standard Purchase / Products screens for warehouse custodians. -->
+    <record id="purchase.menu_purchase_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('supplier_ksa.group_warehouse_custodian'))]"/>
+    </record>
+
+    <!-- Prevent the otherwise ungrouped Vendors menu from leaking through Orders. -->
+    <record id="purchase.menu_procurement_management" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('purchase.group_purchase_user'))]"/>
+    </record>
+    <record id="purchase.menu_procurement_management_supplier_name" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('purchase.group_purchase_user'))]"/>
+    </record>
+
+    <record id="view_product_template_list_warehouse_custodian" model="ir.ui.view">
+        <field name="name">product.template.list.warehouse.custodian</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='standard_price']" position="after">
+                <field name="custodian_quantity"
+                       string="My Location Quantity"
+                       groups="supplier_ksa.group_warehouse_custodian"
+                       optional="show"
+                       decoration-danger="custodian_quantity &lt; 0"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_template_form_warehouse_custodian" model="ir.ui.view">
+        <field name="name">product.template.form.warehouse.custodian</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='group_standard_price']" position="inside">
+                <field name="custodian_quantity"
+                       string="My Location Quantity"
+                       groups="supplier_ksa.group_warehouse_custodian"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

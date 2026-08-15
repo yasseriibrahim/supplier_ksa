@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Patch the standard Partner Ledger report to use our extended handler.
+        Our handler (supplier_ksa.partner.ledger.report.handler) inherits from
+        account.partner.ledger.report.handler so all existing behaviour is preserved;
+        it simply adds the "Print Account Statement" button.
+    -->
+    <record id="account_reports.partner_ledger_report" model="account.report">
+        <field name="custom_handler_model_id"
+               ref="model_supplier_ksa_partner_ledger_report_handler"/>
+    </record>
+</odoo>

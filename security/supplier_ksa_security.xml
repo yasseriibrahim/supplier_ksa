@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ── Import Procurement ── -->
+        <record id="module_import_procurement" model="ir.module.category">
+            <field name="name">Import Procurement</field>
+            <field name="sequence">51</field>
+        </record>
+        <record id="privilege_import_procurement" model="res.groups.privilege">
+            <field name="name">Import Procurement</field>
+            <field name="category_id" ref="module_import_procurement"/>
+            <field name="sequence">51</field>
+        </record>
+        <record id="group_import_procurement_manager" model="res.groups">
+            <field name="name">Manager</field>
+            <field name="privilege_id" ref="privilege_import_procurement"/>
+            <field name="user_ids" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+        </record>
+        <record id="group_import_procurement_user" model="res.groups">
+            <field name="name">User</field>
+            <field name="privilege_id" ref="privilege_import_procurement"/>
+        </record>
+
+        <!-- ── Partner Payment Profile ── -->
+        <record id="module_partner_payment_profile" model="ir.module.category">
+            <field name="name">Partner Payment Profile</field>
+            <field name="sequence">52</field>
+        </record>
+        <record id="privilege_partner_payment_profile" model="res.groups.privilege">
+            <field name="name">Partner Payment Profile</field>
+            <field name="category_id" ref="module_partner_payment_profile"/>
+            <field name="sequence">52</field>
+        </record>
+        <record id="group_payment_profile_user" model="res.groups">
+            <field name="name">User</field>
+            <field name="privilege_id" ref="privilege_partner_payment_profile"/>
+            <field name="user_ids" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+        </record>
+
+        <!-- Warehouse custodian: product maintenance for one assigned location. -->
+        <record id="module_warehouse_custodian" model="ir.module.category">
+            <field name="name">Warehouse Custodian</field>
+            <field name="sequence">53</field>
+        </record>
+        <record id="privilege_warehouse_custodian" model="res.groups.privilege">
+            <field name="name">Warehouse Custodian</field>
+            <field name="category_id" ref="module_warehouse_custodian"/>
+            <field name="sequence">53</field>
+        </record>
+        <record id="group_warehouse_custodian" model="res.groups">
+            <field name="name">امين المخزن</field>
+            <field name="privilege_id" ref="privilege_warehouse_custodian"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="rule_warehouse_custodian_location" model="ir.rule">
+            <field name="name">Warehouse custodian: assigned location only</field>
+            <field name="model_id" ref="stock.model_stock_location"/>
+            <field name="domain_force">user.custodian_location_id and [('id', 'child_of', user.custodian_location_id.id)] or [('id', '=', 0)]</field>
+            <field name="groups" eval="[(4, ref('group_warehouse_custodian'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+        <record id="rule_warehouse_custodian_quant" model="ir.rule">
+            <field name="name">Warehouse custodian: assigned quantities only</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
+            <field name="domain_force">user.custodian_location_id and [('location_id', 'child_of', user.custodian_location_id.id)] or [('id', '=', 0)]</field>
+            <field name="groups" eval="[(4, ref('group_warehouse_custodian'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+    </data>
+</odoo>
