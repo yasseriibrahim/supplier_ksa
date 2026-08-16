@@ -8,10 +8,13 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
     _inherit = 'account.partner.ledger.report.handler'
     _description = 'Partner Ledger Report Handler – Account Statement Extension'
 
+    # ------------------------------------------------------------------ #
+    #  Options initializer – adds the button + swaps template when needed  #
+    # ------------------------------------------------------------------ #
+
     def _custom_options_initializer(self, report, options, previous_options):
         super()._custom_options_initializer(report, options, previous_options)
 
-        # Add the "Print Account Statement" button next to the standard PDF button.
         options['buttons'].append({
             'name': _('Print Account Statement'),
             'sequence': 15,
@@ -22,30 +25,22 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
             'always_show': True,
         })
 
-        # When this handler is active AND we're in account-statement mode,
-        # swap the PDF export template.  We use a flag in previous_options so
-        # that the swap only happens during our own print call, not the regular
-        # PDF button.
         if previous_options.get('_account_statement_mode'):
             options.setdefault('custom_display_config', {}) \
                    .setdefault('pdf_export', {})['pdf_export_main'] = \
                 'supplier_ksa.account_statement_pdf_main'
 
+    # ------------------------------------------------------------------ #
+    #  Main print action                                                   #
+    # ------------------------------------------------------------------ #
+
     def action_print_account_statement(self, options):
-        """
-        Print a styled bilingual Account Statement PDF.
-        Produces the same data as the standard PDF button but uses our custom
-        QWeb template (styled table + company logo + client-name header).
-        All active date/partner filters are respected.
-        """
+        """Print a styled bilingual Account Statement PDF."""
         report = self.env['account.report'].browse(options['report_id'])
 
-        # Re-build options for print mode, injecting our flag so that
-        # _custom_options_initializer picks up the template swap.
         base_options = {**options, 'export_mode': 'print', '_account_statement_mode': True}
         print_options = report.get_options(previous_options=base_options)
 
-        # Determine which reports to print (handles sectioned reports).
         if print_options.get('sections'):
             reports_to_print = self.env['account.report'].browse(
                 [s['id'] for s in print_options['sections']]
@@ -67,8 +62,8 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
             )
             reports_options.append(rpt_options)
 
-        from itertools import groupby
-        grouped = groupby(
+        from itertools import groupby as itr_groupby
+        grouped = itr_groupby(
             zip(reports_to_print, reports_options),
             key=lambda x: len(x[1]['columns']) > 5 or x[1].get('horizontal_split'),
         )
@@ -78,11 +73,7 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
         files_stream = []
         for is_landscape, items in grouped:
             bodies = (
-                rpt._get_pdf_export_html(
-                    rpt_opts,
-                    rpt._filter_out_folded_children(rpt._get_lines(rpt_opts)),
-                    additional_context={'base_url': base_url},
-                )
+                self._get_account_statement_html(rpt, rpt_opts, base_url)
                 for rpt, rpt_opts in items
             )
             files_stream.append(
@@ -113,3 +104,50 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
             'file_content': result,
             'file_type': 'pdf',
         }
+
+    # ------------------------------------------------------------------ #
+    #  HTML rendering – groups flat lines into per-partner sections        #
+    # ------------------------------------------------------------------ #
+
+    def _get_account_statement_html(self, report, options, base_url):
+        """
+        Render the Account Statement HTML for wkhtmltopdf.
+        Pre-groups the flat report lines into a list of partner dicts so the
+        QWeb template can render one clean <table> (with proper thead/tbody)
+        per partner without any XML nesting issues.
+        """
+        raw_lines = report._filter_out_folded_children(report._get_lines(options))
+        formatted = report._format_lines_for_display(raw_lines, options)
+
+        partners = []      # list of {header, rows, subtotal_cols}
+        grand_total = None
+        current = None
+
+        for line in formatted:
+            level = line.get('level', 0)
+            line_id = str(line.get('id', ''))
+            is_total = 'total' in line_id
+
+            if level == 0 and not is_total:
+                # Start a new partner section
+                current = {'header': line, 'rows': []}
+                partners.append(current)
+            elif level > 0 and not is_total:
+                if current is not None:
+                    current['rows'].append(line)
+            elif level == 0 and is_total:
+                grand_total = line
+
+        render_values = {
+            'report': report,
+            'options': options,
+            'partners': partners,
+            'grand_total': grand_total,
+            'base_url': base_url,
+            'env': self.env,
+        }
+
+        return self.env['ir.qweb']._render(
+            'supplier_ksa.account_statement_pdf_main',
+            render_values,
+        )

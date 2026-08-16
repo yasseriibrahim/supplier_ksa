@@ -2,389 +2,297 @@
 <odoo>
 
     <!--
-        Account Statement PDF – styled bilingual (EN/AR) template.
-        Inherits from account_reports.pdf_export_main (primary=True so it is
-        a standalone variant, not a patch on the original template).
-        Activated when options['custom_display_config']['pdf_export']['pdf_export_main']
-        is set to 'supplier_ksa.account_statement_pdf_main'.
+        Account Statement PDF – standalone primary variant.
+        Rendered directly via ir.qweb._render(), NOT via the generic
+        pdf_export_main pipeline, so it does NOT need inherit_id.
+        Receives: report, options, partners, grand_total, base_url, env
     -->
-    <template id="account_statement_pdf_main"
-              inherit_id="account_reports.pdf_export_main"
-              primary="True">
-
-        <!-- ── Replace the <head> assets call so our own CSS is included ── -->
-        <xpath expr="//head" position="replace">
+    <template id="account_statement_pdf_main">
+        <html>
             <head>
-                <base t-att-href="base_url"/>
                 <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
-                <t t-call-assets="account_reports.assets_pdf_export" t-js="False" t-autoprefix="true"/>
                 <style>
-                    /* ══════════════════════════════════════════════════
-                       ACCOUNT STATEMENT – Custom Styles
-                       ══════════════════════════════════════════════════ */
                     @page {
-                        margin-top: 10mm;
-                        margin-bottom: 15mm;
-                        margin-left: 8mm;
-                        margin-right: 8mm;
+                        margin-top: 12mm;
+                        margin-bottom: 16mm;
+                        margin-left: 9mm;
+                        margin-right: 9mm;
                     }
+                    * { box-sizing: border-box; }
+                    body { font-family: Arial, sans-serif; font-size: 10pt;
+                           color: #1e293b; margin: 0; padding: 0; }
 
-                    body { font-family: Arial, sans-serif; font-size: 10pt; color: #1e293b; }
-
-                    /* ── STATEMENT HEADER ── */
-                    .as-header {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 16px;
-                        background: #f8f8f8;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        border: 1px solid #dde1e7;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-                    }
+                    /* ── DOC HEADER ── */
+                    .as-header { width: 100%; border-collapse: collapse;
+                        margin-bottom: 18px; background: #f8f8f8;
+                        border: 1px solid #dde1e7; border-radius: 8px;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .as-header td { padding: 10px 16px; vertical-align: middle; border: none; }
-                    .as-logo { width: 90px; height: 90px; object-fit: contain; border-radius: 6px; border: 1px solid #e0e0e0; }
+                    .as-logo { width: 80px; height: 80px; object-fit: contain;
+                        border-radius: 6px; border: 1px solid #e0e0e0; }
                     .as-company-name { font-size: 13pt; font-weight: 800; color: #111; }
-                    .as-company-sub  { font-size: 8pt; color: #555; line-height: 1.7; }
+                    .as-company-sub  { font-size: 8pt; color: #555; line-height: 1.8; }
                     .as-title-cell   { text-align: center; }
-                    .as-title-en { font-size: 14pt; font-weight: 800; letter-spacing: 1px; color: #111; display: block; }
-                    .as-title-ar { font-size: 12pt; font-weight: 700; color: #444; display: block; margin-top: 2px; }
-                    .as-meta-table { border-collapse: collapse; font-size: 8.5pt; margin-left: auto; }
-                    .as-meta-table td { padding: 3px 6px; }
+                    .as-title-en { font-size: 15pt; font-weight: 800;
+                        letter-spacing: 1px; color: #111; display: block; }
+                    .as-title-ar { font-size: 12pt; font-weight: 700;
+                        color: #444; display: block; margin-top: 3px; }
+                    .as-meta-table { border-collapse: collapse; font-size: 8.5pt;
+                        margin-left: auto; }
+                    .as-meta-table td { padding: 3px 7px; }
                     .as-meta-lbl { color: #555; font-weight: 600; white-space: nowrap; }
                     .as-meta-val { color: #111; font-weight: 700; }
 
-                    /* ── CLIENT HEADER (one per partner) ── */
+                    /* ── CLIENT HEADER ── */
                     .as-client-header {
-                        background: #1e3a5f;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        color: #fff;
-                        padding: 10px 16px;
-                        margin-top: 14px;
-                        margin-bottom: 0;
+                        background: #1e3a5f; color: #fff;
+                        padding: 9px 14px; margin-top: 18px;
                         border-radius: 6px 6px 0 0;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
-                    .as-client-name-en { font-size: 12pt; font-weight: 800; display: inline; }
-                    .as-client-name-ar { font-size: 11pt; font-weight: 700; display: inline; margin-right: 10px; color: #cfe2ff; }
-                    .as-client-meta { font-size: 8pt; color: #b0c8e8; margin-top: 4px; }
+                    .as-client-name { font-size: 11pt; font-weight: 800; }
 
                     /* ── DATA TABLE ── */
-                    .as-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        font-size: 9pt;
-                        margin-bottom: 14px;
-                        border: 1px solid #dde1e7;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-                    }
-                    .as-thead {
+                    .as-table { width: 100%; border-collapse: collapse;
+                        font-size: 9pt; border: 1px solid #c8d3e8;
+                        margin-bottom: 0; }
+                    /* thead */
+                    .as-table thead tr {
                         background: #2563eb;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        color: #fff;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
-                    .as-th {
-                        padding: 7px 8px;
-                        font-weight: 700;
-                        font-size: 8pt;
-                        text-transform: uppercase;
-                        letter-spacing: 0.4px;
-                        border-bottom: 2px solid #1e4db7;
-                        white-space: nowrap;
+                    .as-table thead th {
+                        padding: 7px 8px; color: #fff; font-weight: 700;
+                        font-size: 8pt; text-transform: uppercase;
+                        letter-spacing: 0.4px; border-bottom: 2px solid #1e4db7;
+                        white-space: nowrap; text-align: left;
                     }
-                    .as-th-ar { font-size: 7.5pt; font-weight: 600; display: block; margin-top: 2px; color: #cfe2ff; text-transform: none; letter-spacing: 0; }
-                    .as-th-c { text-align: center; }
-                    .as-th-r { text-align: right; }
-                    .as-row-odd  { background: #ffffff; }
-                    .as-row-even { background: #f0f4ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .as-td { padding: 6px 8px; border-bottom: 1px solid #e8ecf4; vertical-align: top; color: #111; }
-                    .as-td-c { text-align: center; }
-                    .as-td-r { text-align: right; }
-                    .as-td-bold { font-weight: 700; }
-                    .as-td-muted { color: #666; }
-
-                    /* ── PARTNER TOTALS ROW ── */
-                    .as-subtotal-row {
+                    .as-table thead th.r { text-align: right; }
+                    .as-th-ar { font-size: 7pt; font-weight: 500; display: block;
+                        margin-top: 1px; color: #cfe2ff;
+                        text-transform: none; letter-spacing: 0; }
+                    /* tbody rows */
+                    .as-table tbody tr.odd  { background: #ffffff; }
+                    .as-table tbody tr.even {
+                        background: #eef3ff;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                    }
+                    .as-table tbody td {
+                        padding: 5px 8px; border-bottom: 1px solid #e0e6f4;
+                        vertical-align: top; color: #111;
+                    }
+                    .as-table tbody td.r    { text-align: right; }
+                    .as-table tbody td.bold { font-weight: 700; }
+                    .as-table tbody td.muted{ color: #666; }
+                    /* subtotal row */
+                    .as-table tbody tr.subtotal {
                         background: #dbeafe;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact;
                     }
-                    .as-subtotal-td { padding: 6px 8px; font-weight: 700; font-size: 9pt; color: #1e3a5f; border-top: 2px solid #2563eb; border-bottom: 1px solid #dde1e7; }
-
-                    /* ── GRAND TOTAL ROW ── */
-                    .as-grand-row {
-                        background: #1e3a5f;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                    .as-table tbody tr.subtotal td {
+                        padding: 5px 8px; font-weight: 700; font-size: 9pt;
+                        color: #1e3a5f; border-top: 2px solid #2563eb;
                     }
-                    .as-grand-td { padding: 8px 8px; font-weight: 800; font-size: 10pt; color: #fff; border-top: 3px solid #2563eb; }
-                    .as-grand-td-r { text-align: right; }
 
-                    /* ── PAGE BREAK ── */
-                    .as-page-break { page-break-after: always; }
+                    /* ── GRAND TOTAL ── */
+                    .as-grand { width: 100%; border-collapse: collapse;
+                        margin-top: 14px; border: 1px solid #1e3a5f; }
+                    .as-grand td {
+                        padding: 8px 10px; font-weight: 800; font-size: 10pt;
+                        color: #fff; background: #1e3a5f;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                    }
+                    .as-grand td.r { text-align: right; }
 
                     /* ── FOOTER ── */
-                    .as-footer {
-                        margin-top: 8px;
-                        padding: 8px 14px;
-                        background: #f0f4ff;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        border: 1px solid #dde1e7;
-                        border-radius: 6px;
-                        font-size: 7.5pt;
-                        color: #444;
-                    }
+                    .as-footer { margin-top: 14px; padding: 8px 14px;
+                        background: #f0f4ff; border: 1px solid #dde1e7;
+                        border-radius: 6px; font-size: 7.5pt; color: #444;
+                        -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .as-footer table { width: 100%; border-collapse: collapse; }
+                    .as-footer td { border: none; padding: 0 4px; }
                 </style>
             </head>
-        </xpath>
-
-        <!-- ── Replace the full <body> to use our custom layout ── -->
-        <xpath expr="//body" position="replace">
             <body>
-                <div class="o_content">
 
-                    <!-- ══ DOCUMENT HEADER (company info + title + date range) ══ -->
-                    <t t-call="supplier_ksa.account_statement_doc_header"/>
+                <!-- ══ DOCUMENT HEADER ══ -->
+                <table class="as-header">
+                    <tr>
+                        <!-- Logo -->
+                        <td style="width:100px;">
+                            <t t-if="env.company.logo">
+                                <img t-att-src="image_data_uri(env.company.logo)"
+                                     class="as-logo" alt="Logo"/>
+                            </t>
+                        </td>
+                        <!-- Company info -->
+                        <td>
+                            <div class="as-company-name" t-out="env.company.name"/>
+                            <t t-if="env.company.vat">
+                                <div class="as-company-sub">
+                                    <span style="color:#888;">VAT / الرقم الضريبي: </span>
+                                    <strong t-out="env.company.vat"/>
+                                </div>
+                            </t>
+                            <t t-if="env.company.street">
+                                <div class="as-company-sub" t-out="env.company.street"/>
+                            </t>
+                            <t t-if="env.company.phone">
+                                <div class="as-company-sub">
+                                    <span style="color:#888;">Tel: </span>
+                                    <t t-out="env.company.phone"/>
+                                </div>
+                            </t>
+                        </td>
+                        <!-- Title -->
+                        <td class="as-title-cell">
+                            <span class="as-title-en">ACCOUNT STATEMENT</span>
+                            <span class="as-title-ar">كشف حساب</span>
+                        </td>
+                        <!-- Date range -->
+                        <td style="width:210px; text-align:right;">
+                            <table class="as-meta-table">
+                                <t t-set="d_from" t-value="options.get('date', {}).get('date_from', '')"/>
+                                <t t-set="d_to"   t-value="options.get('date', {}).get('date_to',   '')"/>
+                                <t t-if="d_from">
+                                    <tr>
+                                        <td class="as-meta-lbl">From / من:</td>
+                                        <td class="as-meta-val" t-out="d_from"/>
+                                    </tr>
+                                </t>
+                                <t t-if="d_to">
+                                    <tr>
+                                        <td class="as-meta-lbl">To / إلى:</td>
+                                        <td class="as-meta-val" t-out="d_to"/>
+                                    </tr>
+                                </t>
+                                <tr>
+                                    <td class="as-meta-lbl">Printed / طباعة:</td>
+                                    <td class="as-meta-val"
+                                        t-out="datetime.datetime.now().strftime('%Y-%m-%d %H:%M')"/>
+                                </tr>
+                                <t t-if="options.get('all_entries')">
+                                    <tr>
+                                        <td colspan="2"
+                                            style="color:#c2410c;font-weight:700;font-size:8pt;">
+                                            [Draft Included / يشمل المسودة]
+                                        </td>
+                                    </tr>
+                                </t>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
 
-                    <!-- ══ PARTNER SECTIONS ══ -->
-                    <t t-call="supplier_ksa.account_statement_partner_sections"/>
+                <!-- ══ PARTNER SECTIONS ══
+                     Each partner is one complete <table> with thead + tbody.
+                     'partners' is pre-grouped in Python:
+                       [{header: line_dict, rows: [line_dict, ...]}, ...]
+                -->
+                <t t-foreach="partners" t-as="partner">
 
-                </div>
-            </body>
-        </xpath>
+                    <!-- Client name bar -->
+                    <div class="as-client-header">
+                        <span class="as-client-name"
+                              t-out="partner['header'].get('name', '')"/>
+                    </div>
 
-    </template>
-
-    <!-- ══════════════════════════════════════════════════
-         SUB-TEMPLATE: Document-level header
-         ══════════════════════════════════════════════════ -->
-    <template id="account_statement_doc_header">
-        <table class="as-header">
-            <tr>
-                <!-- Logo -->
-                <td style="width:110px;">
-                    <t t-if="env.company.logo">
-                        <img t-att-src="image_data_uri(env.company.logo)" class="as-logo" alt="Logo"/>
-                    </t>
-                </td>
-
-                <!-- Company info -->
-                <td>
-                    <div class="as-company-name" t-out="env.company.name"/>
-                    <t t-if="env.company.vat">
-                        <div class="as-company-sub">
-                            <span style="color:#888;">VAT / الرقم الضريبي: </span>
-                            <strong t-out="env.company.vat"/>
-                        </div>
-                    </t>
-                    <t t-if="env.company.street">
-                        <div class="as-company-sub" t-out="env.company.street"/>
-                    </t>
-                    <t t-if="env.company.phone">
-                        <div class="as-company-sub">
-                            <span style="color:#888;">Tel: </span><t t-out="env.company.phone"/>
-                        </div>
-                    </t>
-                </td>
-
-                <!-- Title (bilingual) -->
-                <td class="as-title-cell">
-                    <span class="as-title-en">ACCOUNT STATEMENT</span>
-                    <span class="as-title-ar">كشف حساب</span>
-                </td>
-
-                <!-- Date range & meta -->
-                <td style="width:200px; text-align:right;">
-                    <table class="as-meta-table">
-                        <t t-set="date_from" t-value="options.get('date', {}).get('date_from', '')"/>
-                        <t t-set="date_to"   t-value="options.get('date', {}).get('date_to', '')"/>
-                        <t t-if="date_from">
+                    <!-- One table per partner with real thead + tbody -->
+                    <table class="as-table">
+                        <thead>
                             <tr>
-                                <td class="as-meta-lbl">From / من:</td>
-                                <td class="as-meta-val" t-out="date_from"/>
+                                <th>Date<span class="as-th-ar">التاريخ</span></th>
+                                <th>Reference<span class="as-th-ar">المرجع</span></th>
+                                <th>Journal<span class="as-th-ar">اليومية</span></th>
+                                <th>Account<span class="as-th-ar">الحساب</span></th>
+                                <th class="r">Debit<span class="as-th-ar">مدين</span></th>
+                                <th class="r">Credit<span class="as-th-ar">دائن</span></th>
+                                <th class="r">Balance<span class="as-th-ar">الرصيد</span></th>
                             </tr>
-                        </t>
-                        <t t-if="date_to">
-                            <tr>
-                                <td class="as-meta-lbl">To / إلى:</td>
-                                <td class="as-meta-val" t-out="date_to"/>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="partner['rows']" t-as="row">
+                                <t t-set="rc"      t-value="row.get('columns', [])"/>
+                                <t t-set="row_cls" t-value="'even' if row_index % 2 == 0 else 'odd'"/>
+                                <t t-set="c_date"
+                                   t-value="([c for c in rc if c.get('expression_label') == 'invoice_date'] or [{}])[0]"/>
+                                <t t-set="c_jour"
+                                   t-value="([c for c in rc if c.get('expression_label') == 'journal_code'] or [{}])[0]"/>
+                                <t t-set="c_acc"
+                                   t-value="([c for c in rc if c.get('expression_label') == 'account_code'] or [{}])[0]"/>
+                                <t t-set="c_deb"
+                                   t-value="([c for c in rc if c.get('expression_label') == 'debit']        or [{}])[0]"/>
+                                <t t-set="c_crd"
+                                   t-value="([c for c in rc if c.get('expression_label') == 'credit']       or [{}])[0]"/>
+                                <t t-set="c_bal"
+                                   t-value="([c for c in rc if c.get('expression_label') == 'balance']      or [{}])[0]"/>
+                                <tr t-att-class="row_cls">
+                                    <td class="muted"
+                                        t-out="c_date.get('name', '') or row.get('date', '') or ''"/>
+                                    <td class="bold"
+                                        t-out="row.get('name', '') or ''"/>
+                                    <td class="muted"
+                                        t-out="c_jour.get('name', '') or ''"/>
+                                    <td class="muted"
+                                        t-out="c_acc.get('name', '')  or ''"/>
+                                    <td class="r"
+                                        t-out="c_deb.get('name', '')  or ''"/>
+                                    <td class="r"
+                                        t-out="c_crd.get('name', '')  or ''"/>
+                                    <td class="r bold"
+                                        t-out="c_bal.get('name', '')  or ''"/>
+                                </tr>
+                            </t>
+
+                            <!-- Partner subtotal row -->
+                            <t t-set="hc"     t-value="partner['header'].get('columns', [])"/>
+                            <t t-set="h_deb"  t-value="([c for c in hc if c.get('expression_label') == 'debit']   or [{}])[0]"/>
+                            <t t-set="h_crd"  t-value="([c for c in hc if c.get('expression_label') == 'credit']  or [{}])[0]"/>
+                            <t t-set="h_bal"  t-value="([c for c in hc if c.get('expression_label') == 'balance'] or [{}])[0]"/>
+                            <tr class="subtotal">
+                                <td colspan="4">Sub-total / المجموع الفرعي</td>
+                                <td class="r" t-out="h_deb.get('name', '') or ''"/>
+                                <td class="r" t-out="h_crd.get('name', '') or ''"/>
+                                <td class="r bold" t-out="h_bal.get('name', '') or ''"/>
                             </tr>
-                        </t>
-                        <tr>
-                            <t t-set="now_dt" t-value="context_timestamp(datetime.datetime.now())"/>
-                            <td class="as-meta-lbl">Printed / طباعة:</td>
-                            <td class="as-meta-val" t-out="now_dt.strftime('%Y-%m-%d %H:%M')"/>
-                        </tr>
-                        <t t-if="options.get('all_entries')">
-                            <tr>
-                                <td colspan="2" style="color:#c2410c; font-weight:700; font-size:8pt;">[Draft Included / يشمل المسودة]</td>
-                            </tr>
-                        </t>
+
+                        </tbody>
                     </table>
-                </td>
-            </tr>
-        </table>
-    </template>
 
-    <!-- ══════════════════════════════════════════════════
-         SUB-TEMPLATE: Partner sections
-         Iterates the report lines and groups them by partner.
-         ══════════════════════════════════════════════════ -->
-    <template id="account_statement_partner_sections">
-        <!--
-            The 'lines' variable is a list of dicts as produced by _format_lines_for_display.
-            Structure:
-              - Partner header lines have  level=0, columns with debit/credit/balance totals
-              - Detail lines have          level=1+, they are children
-              - The last line is the grand total (id contains 'total')
-        -->
-        <t t-set="col_count" t-value="len(options.get('columns', []))"/>
+                </t>
 
-        <t t-foreach="lines" t-as="line">
+                <!-- ══ GRAND TOTAL ══ -->
+                <t t-if="grand_total">
+                    <t t-set="gc"    t-value="grand_total.get('columns', [])"/>
+                    <t t-set="g_deb" t-value="([c for c in gc if c.get('expression_label') == 'debit']   or [{}])[0]"/>
+                    <t t-set="g_crd" t-value="([c for c in gc if c.get('expression_label') == 'credit']  or [{}])[0]"/>
+                    <t t-set="g_bal" t-value="([c for c in gc if c.get('expression_label') == 'balance'] or [{}])[0]"/>
+                    <table class="as-grand">
+                        <tr>
+                            <td colspan="4">TOTAL / الإجمالي العام</td>
+                            <td class="r" t-out="g_deb.get('name', '') or ''"/>
+                            <td class="r" t-out="g_crd.get('name', '') or ''"/>
+                            <td class="r" t-out="g_bal.get('name', '') or ''"/>
+                        </tr>
+                    </table>
+                </t>
 
-            <!-- ── PARTNER HEADER LINE (level 0, not a total) ── -->
-            <t t-if="line.get('level', 99) == 0 and 'total' not in str(line.get('id',''))">
-                <div class="as-client-header">
-                    <span class="as-client-name-en" t-out="line.get('name', '')"/>
-                    <t t-if="line.get('columns')">
-                        <t t-set="bal_col" t-value="next((c for c in line['columns'] if c.get('expression_label') == 'balance'), None)"/>
-                        <t t-if="bal_col">
-                            <span class="as-client-meta">
-                                Balance / الرصيد:
-                                <strong t-out="bal_col.get('no_format', 0) | round(2)"/>
-                            </span>
-                        </t>
-                    </t>
+                <!-- ══ DOCUMENT FOOTER ══ -->
+                <div class="as-footer">
+                    <table>
+                        <tr>
+                            <td t-out="env.company.name"/>
+                            <td style="text-align:center; color:#888;">
+                                Account Statement / كشف حساب
+                            </td>
+                            <td style="text-align:right; color:#888;"
+                                t-out="datetime.datetime.now().strftime('%Y-%m-%d')"/>
+                        </tr>
+                    </table>
                 </div>
 
-                <!-- Column headers for this partner's table -->
-                <table class="as-table">
-                    <thead class="as-thead">
-                        <tr>
-                            <th class="as-th">
-                                Date<span class="as-th-ar">التاريخ</span>
-                            </th>
-                            <th class="as-th">
-                                Reference<span class="as-th-ar">المرجع</span>
-                            </th>
-                            <th class="as-th">
-                                Journal<span class="as-th-ar">اليومية</span>
-                            </th>
-                            <th class="as-th">
-                                Account<span class="as-th-ar">الحساب</span>
-                            </th>
-                            <th class="as-th as-th-r">
-                                Debit<span class="as-th-ar">مدين</span>
-                            </th>
-                            <th class="as-th as-th-r">
-                                Credit<span class="as-th-ar">دائن</span>
-                            </th>
-                            <th class="as-th as-th-r">
-                                Balance<span class="as-th-ar">الرصيد</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            </t>
-
-            <!-- ── DETAIL LINE (level > 0, not a subtotal/total) ── -->
-            <t t-if="line.get('level', 0) > 0 and 'total' not in str(line.get('id',''))">
-                <t t-set="row_class" t-value="'as-row-even' if line_index % 2 == 0 else 'as-row-odd'"/>
-                <tr t-att-class="row_class">
-                    <!-- Date -->
-                    <t t-set="inv_date_col" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'invoice_date'), None)"/>
-                    <td class="as-td as-td-muted">
-                        <t t-if="inv_date_col" t-out="inv_date_col.get('name', '') or ''"/>
-                        <t t-else="" t-out="line.get('date','') or ''"/>
-                    </td>
-                    <!-- Reference / name -->
-                    <td class="as-td as-td-bold" t-out="line.get('name', '') or ''"/>
-                    <!-- Journal -->
-                    <t t-set="journal_col" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'journal_code'), None)"/>
-                    <td class="as-td as-td-muted">
-                        <t t-if="journal_col" t-out="journal_col.get('name','') or ''"/>
-                    </td>
-                    <!-- Account -->
-                    <t t-set="account_col" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'account_code'), None)"/>
-                    <td class="as-td as-td-muted">
-                        <t t-if="account_col" t-out="account_col.get('name','') or ''"/>
-                    </td>
-                    <!-- Debit -->
-                    <t t-set="debit_col" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'debit'), None)"/>
-                    <td class="as-td as-td-r">
-                        <t t-if="debit_col" t-out="debit_col.get('name','') or ''"/>
-                    </td>
-                    <!-- Credit -->
-                    <t t-set="credit_col" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'credit'), None)"/>
-                    <td class="as-td as-td-r">
-                        <t t-if="credit_col" t-out="credit_col.get('name','') or ''"/>
-                    </td>
-                    <!-- Balance -->
-                    <t t-set="balance_col" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'balance'), None)"/>
-                    <td class="as-td as-td-r as-td-bold">
-                        <t t-if="balance_col" t-out="balance_col.get('name','') or ''"/>
-                    </td>
-                </tr>
-            </t>
-
-            <!-- ── PARTNER SUBTOTAL line (level 0 with 'total' in id, OR level>0 with 'total' in id that belongs to a partner) ── -->
-            <t t-if="line.get('level', 0) == 0 and 'total' not in str(line.get('id',''))">
-                <!-- This is the closing of a previous partner block — no action needed, handled below -->
-            </t>
-
-            <!-- Close partner table when we hit a new level-0 line or the grand total -->
-            <t t-if="(line.get('level', 99) == 0 and 'total' not in str(line.get('id',''))) and not line_first">
-                    </tbody>
-                </table>
-            </t>
-
-            <!-- ── GRAND TOTAL LINE ── -->
-            <t t-if="'total' in str(line.get('id','')) and line.get('level',0) == 0">
-                    </tbody>
-                </table>
-                <table class="as-table" style="margin-top:8px;">
-                    <tbody>
-                        <tr class="as-grand-row">
-                            <td class="as-grand-td" colspan="4">
-                                TOTAL / الإجمالي
-                            </td>
-                            <t t-set="g_debit"  t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'debit'), None)"/>
-                            <t t-set="g_credit" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'credit'), None)"/>
-                            <t t-set="g_balance" t-value="next((c for c in line.get('columns',[]) if c.get('expression_label') == 'balance'), None)"/>
-                            <td class="as-grand-td as-grand-td-r">
-                                <t t-if="g_debit" t-out="g_debit.get('name','') or ''"/>
-                            </td>
-                            <td class="as-grand-td as-grand-td-r">
-                                <t t-if="g_credit" t-out="g_credit.get('name','') or ''"/>
-                            </td>
-                            <td class="as-grand-td as-grand-td-r">
-                                <t t-if="g_balance" t-out="g_balance.get('name','') or ''"/>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </t>
-
-        </t>
-
-        <!-- ── DOCUMENT FOOTER ── -->
-        <div class="as-footer">
-            <table style="width:100%; border-collapse:collapse;">
-                <tr>
-                    <td style="width:50%;" t-out="env.company.name"/>
-                    <td style="text-align:center; color:#888;">
-                        Account Statement / كشف حساب
-                    </td>
-                    <td style="text-align:right; color:#888;">
-                        <t t-set="now_dt" t-value="context_timestamp(datetime.datetime.now())"/>
-                        <t t-out="now_dt.strftime('%Y-%m-%d')"/>
-                    </td>
-                </tr>
-            </table>
-        </div>
+            </body>
+        </html>
     </template>
 
 </odoo>
