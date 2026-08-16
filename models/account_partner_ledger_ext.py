@@ -9,7 +9,7 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
     _description = 'Partner Ledger Report Handler – Account Statement Extension'
 
     # ------------------------------------------------------------------ #
-    #  Options initializer – adds the button + swaps template when needed  #
+    #  Options initializer – adds button + swaps template when needed      #
     # ------------------------------------------------------------------ #
 
     def _custom_options_initializer(self, report, options, previous_options):
@@ -38,7 +38,15 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
         """Print a styled bilingual Account Statement PDF."""
         report = self.env['account.report'].browse(options['report_id'])
 
-        base_options = {**options, 'export_mode': 'print', '_account_statement_mode': True}
+        # unfold_all=True is critical – without it _get_lines returns only
+        # partner header lines (level=0) and _filter_out_folded_children
+        # removes every child, producing an empty report.
+        base_options = {
+            **options,
+            'export_mode': 'print',
+            'unfold_all': True,
+            '_account_statement_mode': True,
+        }
         print_options = report.get_options(previous_options=base_options)
 
         if print_options.get('sections'):
@@ -52,13 +60,21 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
             self.env['ir.config_parameter'].sudo().get_param('report.url') or
             self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         )
-        rcontext = {'mode': 'print', 'base_url': base_url, 'company': self.env.company}
+        rcontext = {
+            'mode': 'print',
+            'base_url': base_url,
+            'company': self.env.company,
+        }
 
         reports_options = []
         for rpt in reports_to_print:
             rpt_options = rpt.get_options(
-                previous_options={**print_options, 'selected_section_id': rpt.id,
-                                  '_account_statement_mode': True}
+                previous_options={
+                    **print_options,
+                    'selected_section_id': rpt.id,
+                    'unfold_all': True,
+                    '_account_statement_mode': True,
+                }
             )
             reports_options.append(rpt_options)
 
@@ -71,6 +87,7 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
         action_report = self.env['ir.actions.report']
         footer = report._get_layout_footer(rcontext)
         files_stream = []
+
         for is_landscape, items in grouped:
             bodies = (
                 self._get_account_statement_html(rpt, rpt_opts, base_url)
@@ -111,25 +128,27 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
 
     def _get_account_statement_html(self, report, options, base_url):
         """
-        Render the Account Statement HTML for wkhtmltopdf.
-        Pre-groups the flat report lines into a list of partner dicts so the
-        QWeb template can render one clean <table> (with proper thead/tbody)
-        per partner without any XML nesting issues.
-        """
-        raw_lines = report._filter_out_folded_children(report._get_lines(options))
-        formatted = report._format_lines_for_display(raw_lines, options)
+        Fetch all lines (with unfold_all already True in options),
+        group them by partner, and render via our custom QWeb template.
 
-        partners = []      # list of {header, rows, subtotal_cols}
+        Line structure produced by _get_lines when unfold_all=True:
+          level=0, 'total' NOT in id  → partner header (has summary columns)
+          level>0                      → transaction detail rows
+          level=0, 'total' IN id       → grand total
+        """
+        # _get_lines already expands everything because options['unfold_all']=True
+        raw_lines = report._get_lines(options)
+
+        partners = []       # [{header: line_dict, rows: [line_dict, ...]}, ...]
         grand_total = None
         current = None
 
-        for line in formatted:
-            level = line.get('level', 0)
+        for line in raw_lines:
+            level   = line.get('level', 0)
             line_id = str(line.get('id', ''))
             is_total = 'total' in line_id
 
             if level == 0 and not is_total:
-                # Start a new partner section
                 current = {'header': line, 'rows': []}
                 partners.append(current)
             elif level > 0 and not is_total:
@@ -139,12 +158,12 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
                 grand_total = line
 
         render_values = {
-            'report': report,
-            'options': options,
-            'partners': partners,
+            'report':      report,
+            'options':     options,
+            'partners':    partners,
             'grand_total': grand_total,
-            'base_url': base_url,
-            'env': self.env,
+            'base_url':    base_url,
+            'env':         self.env,
         }
 
         return self.env['ir.qweb']._render(
