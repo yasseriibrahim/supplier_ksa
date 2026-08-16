@@ -144,18 +144,22 @@ class PartnerLedgerReportHandlerExt(models.AbstractModel):
         current = None
 
         for line in raw_lines:
-            level   = line.get('level', 0)
-            line_id = str(line.get('id', ''))
-            is_total = 'total' in line_id
+            line_id  = str(line.get('id', ''))
+            markup   = report._get_markup(line_id) if line_id else None
+            expand_fn = line.get('expand_function', '') or ''
 
-            if level == 0 and not is_total:
+            # Grand total: markup == 'total' and no parent_id
+            if markup == 'total' and not line.get('parent_id'):
+                grand_total = line
+
+            # Partner header: has the partner_ledger expand function
+            elif 'partner_ledger' in expand_fn and 'prefix_group' not in expand_fn:
                 current = {'header': line, 'rows': []}
                 partners.append(current)
-            elif level > 0 and not is_total:
-                if current is not None:
-                    current['rows'].append(line)
-            elif level == 0 and is_total:
-                grand_total = line
+
+            # Detail / initial-balance rows: have a parent_id (child of a partner)
+            elif line.get('parent_id') and current is not None:
+                current['rows'].append(line)
 
         render_values = {
             'report':      report,
