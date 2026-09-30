@@ -12,6 +12,11 @@
                         class="btn-primary"
                         invisible="state == 'cancel'"/>
             </xpath>
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="agent_id" string="Agent Name"/>
+                <field name="branch_name" string="Branch Name"/>
+                <field name="collect_type" string="Payment Way"/>
+            </xpath>
         </field>
     </record>
 </odoo>

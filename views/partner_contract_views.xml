@@ -47,7 +47,7 @@
 
                 <group>
                     <group string="Contract Details">
-                        <field name="partner_id" options="{'no_create': True}"/>
+                        <field name="partner_id"/>
                         <field name="start_date"/>
                         <field name="end_date"/>
                         <field name="contract_amount"/>

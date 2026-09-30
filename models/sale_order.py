@@ -36,16 +36,15 @@ class SaleOrder(models.Model):
         compute="_compute_custom_quotation_amounts", currency_field="currency_id",
     )
     amount_total_words = fields.Char(compute="_compute_custom_quotation_amounts")
+    agent_id = fields.Many2one('res.partner', string='Agent Name')
+
 
     def _compute_custom_quotation_report_fields(self):
         for order in self:
             order.qr = False
             order.move_type = "sale"
             order.payment_state = "not_paid"
-            order.driver_name = False
-            order.invoice_region = False
-            order.collect_type = False
-            order.branch_name = False
+
 
     @api.depends(
         "order_line.discount", "order_line.price_unit", "order_line.product_uom_qty",
