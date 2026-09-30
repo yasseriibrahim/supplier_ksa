@@ -21,14 +21,14 @@ class SaleOrder(models.Model):
         [("sale", "Quotation")], compute="_compute_custom_quotation_report_fields",
     )
     payment_state = fields.Selection(
-        [("not_paid", "Quotation")], compute="_compute_custom_quotation_report_fields",
+        [("not_paid", "Quotation")],
     )
     driver_name = fields.Many2one(
-        "res.partner", compute="_compute_custom_quotation_report_fields",
+        "res.partner",
     )
-    invoice_region = fields.Char(compute="_compute_custom_quotation_report_fields")
-    collect_type = fields.Char(compute="_compute_custom_quotation_report_fields")
-    branch_name = fields.Char(compute="_compute_custom_quotation_report_fields")
+    invoice_region = fields.Char()
+    collect_type = fields.Char()
+    branch_name = fields.Char()
     amount_discount = fields.Monetary(
         compute="_compute_custom_quotation_amounts", currency_field="currency_id",
     )
