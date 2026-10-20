@@ -14,6 +14,7 @@
             </xpath>
             <xpath expr="//field[@name='partner_id']" position="after">
                 <field name="agent_id" string="Agent Name"/>
+                <field name="invoice_region" string="Region"/>
                 <field name="branch_name" string="Branch Name"/>
                 <field name="collect_type" string="Payment Way"/>
             </xpath>

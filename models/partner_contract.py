@@ -19,6 +19,7 @@ class PartnerContract(models.Model):
         'res.partner', string='Customer', required=True,
         ondelete='cascade', index=True, tracking=True,
     )
+    branch_name = fields.Char(string='Branch Name')
     state = fields.Selection([
         ('draft', 'Draft'),
         ('active', 'Active'),

@@ -419,6 +419,24 @@
                                         <td class="ci-field-val-td" t-esc="o.partner_id.phone"/>
                                     </tr>
                                 </t>
+                                <t t-if="o._name == 'sale.order' and o.invoice_region">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Region / المنطقة</td>
+                                        <td class="ci-field-val-td" t-esc="o.invoice_region"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o._name == 'sale.order' and o.collect_type">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Payment Way / طريقة الدفع</td>
+                                        <td class="ci-field-val-td" t-esc="o.collect_type"/>
+                                    </tr>
+                                </t>
+                                <t t-if="o._name == 'sale.order' and o.branch_name">
+                                    <tr>
+                                        <td class="ci-field-lbl-td">Branch / الفرع</td>
+                                        <td class="ci-field-val-td" t-esc="o.branch_name"/>
+                                    </tr>
+                                </t>
                             </table>
                         </td>
                     </tr></tbody>

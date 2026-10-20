@@ -48,6 +48,7 @@
                 <group>
                     <group string="Contract Details">
                         <field name="partner_id"/>
+                        <field name="branch_name"/>
                         <field name="start_date"/>
                         <field name="end_date"/>
                         <field name="contract_amount"/>
